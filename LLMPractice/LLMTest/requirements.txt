@@ -1,0 +1,3 @@
+pip install langchain
+pip install huggingface_hub(installed in created environment .env2)
+pip install transformers

@@ -1,0 +1,2 @@
+-https://blog.finxter.com/openapi-cheat-sheet/-
+-https://analyzingalpha.com/langchain-python-tutorial-
