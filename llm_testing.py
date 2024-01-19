@@ -80,29 +80,31 @@ def generation_function(texts):
     return generated_recipe
 
 
-items = [
-    "beef, potatoes, tomatoes, garlic"
-]
-generated = generation_function(items)
-for text in generated:
-    sections = text.split("\n")
-    for section in sections:
-        section = section.strip()
-        if section.startswith("title:"):
-            section = section.replace("title:", "")
-            headline = "TITLE"
-        elif section.startswith("ingredients:"):
-            section = section.replace("ingredients:", "")
-            headline = "INGREDIENTS"
-        elif section.startswith("directions:"):
-            section = section.replace("directions:", "")
-            headline = "DIRECTIONS"
+if __name__ == "__main__":
+    while True:
+        print("Insert list of ingredients for recipe generation: \n")
+        items = [input()]
+        generated = generation_function(items)
+        for text in generated:
+            sections = text.split("\n")
+            for section in sections:
+                section = section.strip()
+                if section.startswith("title:"):
+                    section = section.replace("title:", "")
+                    headline = "TITLE"
+                elif section.startswith("ingredients:"):
+                    section = section.replace("ingredients:", "")
+                    headline = "INGREDIENTS"
+                elif section.startswith("directions:"):
+                    section = section.replace("directions:", "")
+                    headline = "DIRECTIONS"
 
-        if headline == "TITLE":
-            print(f"[{headline}]: {section.strip().capitalize()}")
-        else:
-            section_info = [f"  - {i + 1}: {info.strip().capitalize()}" for i, info in enumerate(section.split("--"))]
-            print(f"[{headline}]:")
-            print("\n".join(section_info))
+                if headline == "TITLE":
+                    print(f"[{headline}]: {section.strip().capitalize()}")
+                else:
+                    section_info = [f"  - {i + 1}: {info.strip().capitalize()}" for i, info in
+                                    enumerate(section.split("--"))]
+                    print(f"[{headline}]:")
+                    print("\n".join(section_info))
 
-    print("-" * 130)
+            print("-" * 130)
