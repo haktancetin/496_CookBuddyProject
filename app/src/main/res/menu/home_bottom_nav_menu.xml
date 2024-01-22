@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/bottom_home"
+        android:title="Home"
+        android:visible="true"
+        android:icon="@drawable/home"
+        />
+    <item
+        android:id="@+id/Share"
+        android:title="Share"
+        android:visible="true"/>
+
+    <item
+        android:id="@+id/Photo"
+        android:title="AAA"
+        android:visible="true"/>
+
+    <item
+        android:id="@+id/bbb"
+        android:title="BBB"
+        android:visible="true"/>
+</menu>

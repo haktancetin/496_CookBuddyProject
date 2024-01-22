@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/foodbackground">
+
+    <TextView
+        android:id="@+id/tvCookBuddy"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="600sp"
+        android:fontFamily="@font/covered_by_your_grace"
+        android:paddingRight="10dp"
+        android:text="@string/COOKBUDDY"
+        android:textAlignment="viewEnd"
+        android:textColor="@color/black"
+        android:textSize="70sp"
+        android:textStyle="bold" />
+
+
+    <TextView
+        android:id="@+id/tvGetStart"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:clickable="true"
+        android:fontFamily="@font/bad_script"
+        android:onClick="onClick"
+        android:paddingRight="10dp"
+        android:text="Get Start"
+        android:textAlignment="textEnd"
+        android:textColor="@color/textcolor"
+        android:textSize="30sp"
+        android:textStyle="bold" />
+
+
+
+</LinearLayout>

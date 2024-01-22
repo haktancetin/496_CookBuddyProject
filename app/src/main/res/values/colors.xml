@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="lightblack">#170101</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="backgroundRed">#870000</color>
+    <color name="signbutton">#5C2626</color>
+    <color name="lightwhite">#A8A0A0</color>
+    <color name="grey">#5A5656</color>
+
+
+    <color name="palet11">#AAC9CE</color>
+    <color name="palete12">#B6B4C2</color>
+    <color name="palete13">#C9BBC8</color>
+    <color name="palete14">#E5C1CD</color>
+    <color name="palete15">#F3DBCF</color>
+    <color name="textcolor">#2b2b2b</color>
+    <color name="palet17">#5CA7B5</color>
+    <color name="palete16">#C6C5C8</color>
+
+    <color name="palet31">#911F27</color>
+    <color name="palete32">#630A10</color>
+    <color name="palete33">#FCF0C8</color>
+    <color name="palete34">#FACE7F</color>
+
+    <color name="palet41">#E9BC84</color>
+    <color name="palete42">#EB6E6C</color>
+    <color name="palete43">#541E1B</color>
+    <color name="palete44">#C97644</color>
+
+    <color name="palet51">#FCF5ED</color>
+    <color name="palete52">#F4BF96</color>
+    <color name="palete53">#CE5A67</color>
+    <color name="palete54">#1F1717</color>
+
+    <color name="palet61">#f2e3c6</color>
+    <color name="palete62">#ffc6a5</color>
+    <color name="palete63">#e6324b</color>
+    <color name="palete65">#353634</color>
+
+    <color name="palet71">#FFC529</color>
+    <color name="palete72">#FE724C</color>
+    <color name="palete73">#D7D7D7</color>
+    <color name="palete74">#272D2F</color>
+
+
+
+</resources>
