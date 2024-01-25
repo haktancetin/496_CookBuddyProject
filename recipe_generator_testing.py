@@ -1,3 +1,5 @@
+import uuid
+
 from transformers import FlaxAutoModelForSeq2SeqLM
 from transformers import AutoTokenizer
 
@@ -77,6 +79,37 @@ def generation_function(texts):
         tokenizer.batch_decode(generated, skip_special_tokens=False),
         special_tokens
     )
+    return generated_recipe
+
+def get_recipe():
+    items = [input()]
+    generated = generation_function(items)
+    generated_recipe = {}
+    for text in generated:
+        sections = text.split("\n")
+        for section in sections:
+            section = section.strip()
+            if section.startswith("title:"):
+                section = section.replace("title:", "")
+                headline = "TITLE"
+            elif section.startswith("ingredients:"):
+                section = section.replace("ingredients:", "")
+                headline = "INGREDIENTS"
+            elif section.startswith("directions:"):
+                section = section.replace("directions:", "")
+                headline = "DIRECTIONS"
+
+            if headline == "TITLE":
+                generated_recipe["title"] = section.strip().capitalize()
+            elif headline == "INGREDIENTS":
+                generated_recipe["ingredients"] = [f"  - {i + 1}: {info.strip().capitalize()}" for i, info in
+                                enumerate(section.split("--"))]
+            else:
+                generated_recipe["directions"] = [f"  - {i + 1}: {info.strip().capitalize()}" for i, info in
+                                enumerate(section.split("--"))]
+
+            generated_recipe["id"] = uuid.uuid4().hex
+
     return generated_recipe
 
 
