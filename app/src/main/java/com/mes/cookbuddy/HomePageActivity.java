@@ -43,6 +43,7 @@ public class HomePageActivity extends AppCompatActivity {
         String log_userName=logHomeInt.getStringExtra("log_et_username");
         home_txt_user.setText(log_userName);
 
+
         ActionBarDrawerToggle toggle=new ActionBarDrawerToggle(this,homeDrawerLayout,home_toolbar,R.string.open,R.string.close);
         homeDrawerLayout.addDrawerListener(toggle);
         toggle.syncState();
@@ -55,6 +56,11 @@ public class HomePageActivity extends AppCompatActivity {
                 if(item.getItemId()==R.id.logout){
                     Intent HomeToLogout = new Intent(HomePageActivity.this,LoginActivity.class);
                     startActivity(HomeToLogout);
+                }
+                if(item.getItemId()==R.id.account){
+                    Intent account = new Intent(HomePageActivity.this,ProfileActivity.class);
+                    account.putExtra("log_et_username",log_userName);
+                    startActivity(account);
                 }
                 return false;
             }

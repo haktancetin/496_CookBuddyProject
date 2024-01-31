@@ -3,7 +3,7 @@ package com.mes.cookbuddy;
 
 public class UserInfoForLogin {
     private String username,firstname,lastname,password,passwordverify,email;
-    private int age;
+    private int age,id;
 
     public String getUsername() {
         return username;
@@ -60,5 +60,13 @@ public class UserInfoForLogin {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 }

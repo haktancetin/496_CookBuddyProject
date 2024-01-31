@@ -1,6 +1,7 @@
 package com.mes.cookbuddy;
 
 import android.os.StrictMode;
+import android.provider.ContactsContract;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -29,18 +30,28 @@ public class DataBase {
         }
         return conn;
     }
-
-    public void userinfoView(String name) {
+  //----Show user info
+    public UserInfoForLogin userinfoView(String name) {
+        UserInfoForLogin ui=new UserInfoForLogin();
         try {
             Statement statement = conn.createStatement();
             ResultSet rs = statement.executeQuery("SELECT * FROM  public.userinfo dn WHERE dn.username='" + name + "' ORDER BY dn.id;");
             while (rs.next()) {
-                System.out.println("ID = " + rs.getInt("id") + " USERNAME = " + rs.getString("username") + " MAIL = " + rs.getString("mail")+ " AGE = " + rs.getInt("ages")+" fistname = "+ rs.getString("firstname")+" lastname = "+ rs.getString("lastname"));
+                ui.setId(rs.getInt("id"));
+                ui.setUsername(rs.getString("username"));
+                ui.setFirstname(rs.getString("firstname"));
+                ui.setLastname(rs.getString("lastname"));
+                ui.setEmail(rs.getString("email"));
+                ui.setPassword(rs.getString("password"));
+                ui.setAge(rs.getInt("ages"));
+                //System.out.println("ID = " + rs.getInt("id") + " USERNAME = " + rs.getString("username") + " MAIL = " + rs.getString("email")+ " AGE = " + rs.getInt("ages")+" fistname = "+ rs.getString("firstname")+" lastname = "+ rs.getString("lastname"));
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return ui;
     }
+    //----Checks if username and password match.
     public boolean userinfoCheck(String username,String password) {
         try {
             Statement statement = conn.createStatement();
@@ -55,6 +66,7 @@ public class DataBase {
         }
         return false;
     }
+    //---- Check Username is unique or not
     public boolean userUsernameCheck(String username) {
         try {
             Statement statement = conn.createStatement();
@@ -62,36 +74,43 @@ public class DataBase {
             int count=0;
             while (rs.next()) {
                 count++;
-                if(count==0){
-                    return true;
-                }
+            }
+            if(count==0){
+                return true;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
     }
-    public void userinfoInsert(String username,String mail,int age,String firstname,String lastname,String password) {
+    //---- Add database new user
+    public void userinfoInsert(UserInfoForLogin ui) {
         try {
-            String SQL = "INSERT INTO public.userinfo(username, mail, ages, firstname, lastname, password) VALUES(?, ?, ?, ?, ?, ?); ";
+            String SQL = "INSERT INTO public.userinfo(username, email, ages, firstname, lastname, password) VALUES(?, ?, ?, ?, ?, ?); ";
             PreparedStatement prp = conn.prepareStatement(SQL);
-            prp.setString(1, username);
-            prp.setString(2, mail);
-            prp.setInt(3, age);
-            prp.setString(4,firstname);
-            prp.setString(5,lastname);
-            prp.setString(6,password);
+            prp.setString(1, ui.getUsername());
+            prp.setString(2, ui.getEmail());
+            prp.setInt(3, ui.getAge());
+            prp.setString(4,ui.getFirstname());
+            prp.setString(5,ui.getLastname());
+            prp.setString(6,ui.getPassword());
             int row = prp.executeUpdate();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
-    public void userinfoUpdate(String user) {
+//---- Update data in database
+    public void userinfoUpdate(UserInfoForLogin ui) {
         try {
-            String SQL = "UPDATE public.userinfo SET username=?, mail=?, ages=? WHERE username='" + user + "'; ";
+            String SQL = "UPDATE public.userinfo SET username=?, email=?, ages=?, firstname=?, lastname=?, password=? WHERE username='" + ui.getUsername() + "'; ";
             PreparedStatement prp = conn.prepareStatement(SQL);
-            //int row = prp.executeUpdate();
+            prp.setString(1, ui.getUsername());
+            prp.setString(2, ui.getEmail());
+            prp.setInt(3, ui.getAge());
+            prp.setString(4,ui.getFirstname());
+            prp.setString(5,ui.getLastname());
+            prp.setString(6, ui.getPassword());
+            int row = prp.executeUpdate();
         } catch (Exception e) {
             e.printStackTrace();
         }

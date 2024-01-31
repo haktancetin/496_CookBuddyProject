@@ -106,8 +106,16 @@ TextView txt_notverify;
                     }
                     if(control!=1){
                         DataBase db=new DataBase();
+                        UserInfoForLogin ui=new UserInfoForLogin();
+                        ui.setUsername(et_username.getText().toString());
+                        ui.setPassword(et_password.getText().toString());
+                        ui.setEmail(et_email.getText().toString());
+                        int parseint=Integer.parseInt(et_age.getText().toString());
+                        ui.setAge(parseint);
+                        ui.setFirstname(et_firstname.getText().toString());
+                        ui.setLastname(et_lastname.getText().toString());
                         if(db.userUsernameCheck(uifl.getUsername())){
-                            db.userinfoInsert(uifl.getUsername(),uifl.getEmail(), uifl.getAge(), uifl.getFirstname(),uifl.getLastname(),uifl.getPassword());
+                            db.userinfoInsert(ui);
                             Intent SignToHome = new Intent(SignUpActivity.this,HomePageActivity.class);
                             startActivity(SignToHome);
                         }
