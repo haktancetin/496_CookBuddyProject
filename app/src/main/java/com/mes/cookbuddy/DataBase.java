@@ -23,7 +23,7 @@ public class DataBase {
     public Connection connect() {
         try {
             Class dbDriver = Class.forName("org.postgresql.Driver");
-            String jdbcURL = "jdbc:postgresql://10.0.2.2:5432/postgres";
+            String jdbcURL = "jdbc:postgresql://192.168.1.35:5432/postgres";
             conn = DriverManager.getConnection(jdbcURL, "postgres", "melin123");
         } catch (Exception e) {
             e.printStackTrace();

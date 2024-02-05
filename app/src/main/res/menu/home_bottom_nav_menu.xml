@@ -11,13 +11,11 @@
         android:title="Share"
         android:visible="true"/>
 
-    <item
-        android:id="@+id/Photo"
-        android:title="AAA"
-        android:visible="true"/>
+
 
     <item
-        android:id="@+id/bbb"
-        android:title="BBB"
-        android:visible="true"/>
+        android:id="@+id/camera"
+        android:title="Camera"
+        android:visible="true"
+        android:icon="@drawable/baseline_add_a_photo_24"/>
 </menu>

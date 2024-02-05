@@ -8,14 +8,18 @@ import androidx.drawerlayout.widget.DrawerLayout;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.widget.Toolbar;
 
 
+import com.google.android.material.bottomappbar.BottomAppBar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.navigation.NavigationView;
 
 public class HomePageActivity extends AppCompatActivity {
@@ -25,6 +29,7 @@ public class HomePageActivity extends AppCompatActivity {
 
     Toolbar home_toolbar;
     TextView home_txt_user;
+    BottomNavigationView home_bottomnav;
 
 
     @Override
@@ -37,6 +42,8 @@ public class HomePageActivity extends AppCompatActivity {
         home_toolbar=(Toolbar) findViewById(R.id.home_toolbar);
         View headerView = home_navigationView.getHeaderView(0);
         home_txt_user=(TextView) headerView.findViewById(R.id.home_txt_user);
+        home_bottomnav=(BottomNavigationView)findViewById(R.id.home_bottomnav);
+
 
 
         Intent logHomeInt=getIntent();
@@ -48,6 +55,7 @@ public class HomePageActivity extends AppCompatActivity {
         homeDrawerLayout.addDrawerListener(toggle);
         toggle.syncState();
         toggle.getDrawerArrowDrawable().setColor(getResources().getColor(R.color.black));
+
 
         home_navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
 
@@ -62,10 +70,25 @@ public class HomePageActivity extends AppCompatActivity {
                     account.putExtra("log_et_username",log_userName);
                     startActivity(account);
                 }
+
+                return false;
+            }
+
+        });
+        home_bottomnav.setOnItemSelectedListener(new NavigationBarView.OnItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                if(item.getItemId()==R.id.bottom_home){
+                    Intent camera = new Intent(HomePageActivity.this,HomePageActivity.class);
+                    startActivity(camera);
+                }
+                if(item.getItemId()==R.id.camera){
+                    Intent camera = new Intent(HomePageActivity.this,CameraActivity.class);
+                    startActivity(camera);
+                }
                 return false;
             }
         });
-
 
 
 
