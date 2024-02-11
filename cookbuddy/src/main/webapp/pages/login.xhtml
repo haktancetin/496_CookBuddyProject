@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:a="http://xmlns.jcp.org/jsf/passthrough">
+    <h:head>
+        <title>login</title>
+        <meta content='text/html; charset=UTF-8' http-equiv="Content-Type"/>
+        <link rel="icon" type="image/ico" href="#{request.contextPath}/images/app.ico"/>
+        
+        <style type="text/css">
+        </style>        
+    </h:head>
+    <h:body class="lgnBackground">
+        <h:form >
+       
+            <div style="text-align: center;display:flex;justify-content:center;">
+                <h:panelGroup id="panel" class="panel" layout="block" style="width:300px;">
+                    <h:messages globalOnly="true" />
+
+                    <h3 id="baslik">#{msg['login.baslik']}</h3>
+
+                    <h:outputText value="#{msg['login.username']}" />
+                    <h:inputText id="kullanici" class="username" value="#{login.username}" a:placeholder="Username"></h:inputText>
+                    <br></br><br></br>
+                    <h:outputText value="#{msg['login.password']}" />
+                    <h:inputSecret id="sifre" class="password" value="#{login.password}" a:placeholder="Password"></h:inputSecret>
+                    <h:message for="sifre"></h:message>
+                    <br></br><br></br>
+                    <h:commandButton id="loginBtn" class="button1" value="#{msg['login.giris']}" action="#{login.kontrol}"/>
+                    <h:commandButton id="signupBtn" class="button2" value="#{msg['login.sign']}" action="signup.xhtml"/>
+                </h:panelGroup>
+            </div> 
+            <h:outputStylesheet library="css" name="loginstyle.css"/>
+        </h:form> 
+      
+    </h:body>
+</html>

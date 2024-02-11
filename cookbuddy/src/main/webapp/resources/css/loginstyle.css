@@ -1,0 +1,67 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Covered+By+Your+Grace&display=swap');
+
+
+.lgnBackground {
+    
+    background-image: url(../images/lgnbackground.jpg);
+    background-repeat: no-repeat;
+    background-size: cover;
+    
+}
+
+.panel{
+    padding: 40px 60px 40px 40px;
+    border-radius: 10px;
+    border-color: black;
+    box-shadow: 0 0 40px black;
+    margin-top: 100px;
+}
+.username, .password{
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border-top: 0px;
+    border-left: 0px;
+    border-right: 0px;
+    background: transparent;
+    border-bottom:1px solid #000000;
+}
+h3{
+    text-align:center;
+    margin-top: 5px;
+    font-size: 3em;
+    color: black;
+    font-family: 'Covered By Your Grace', cursive;
+}
+
+.button1[type=submit],.button2[type=submit]{
+    background-color: black;
+    color:#FFC529;
+    padding: 12px 20px;
+    border-radius:20px; 
+}
+.button1:hover,.button2:hover{
+    background-color: #FFC529;
+    color: black;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px solid #000000;
+    border-radius: 4px;
+}
+
+i {
+    position: absolute;
+    top: 60%;
+    right: 10px;
+    transform: translateY(-50%);
+    color: #888;
+}
+
+
+
+
+

@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:a="http://xmlns.jcp.org/jsf/passthrough">
+    <h:head>
+        <title>login</title>
+        <meta content='text/html; charset=UTF-8' http-equiv="Content-Type"/>
+        <link rel="icon" type="image/ico" href="#{request.contextPath}/images/app.ico"/>
+      
+        <style type="text/css">
+        </style>        
+    </h:head>
+    <h:body class="lgnBackground">
+        <h:form >
+            <div style="text-align: center;display:flex;justify-content:center;">
+                <h:panelGroup id="panel" class="panel" layout="block" style="width:300px;">
+                    <h:messages globalOnly="true" />
+
+                    <h3 id="baslik">#{msg['signup.baslik']}</h3>
+
+                    <h:outputText value="#{msg['signup.username']}" />
+                    <h:inputText id="username" class="username" value="#{signup.sgn.username}" a:placeholder="Username"></h:inputText>
+                    <br></br><br></br>
+                    <h:outputText value="#{msg['signup.firstname']}" />
+                    <h:inputText id="firstname" class="firstname" value="#{signup.sgn.firstname}" a:placeholder="First Name"></h:inputText>
+                    <br></br><br></br>
+                    <h:outputText value="#{msg['signup.lastname']}" />
+                    <h:inputText id="lastname" class="lastname" value="#{signup.sgn.lastname}" a:placeholder="Last Name"></h:inputText>
+                    <br></br><br></br>
+                    <h:outputText value="#{msg['signup.ages']}" />
+                    <h:inputText id="age" class="ages" value="#{signup.sgn.ages}" a:placeholder="Age"></h:inputText>
+                    <br></br><br></br>
+                    <h:outputText value="#{msg['signup.email']}" />
+                    <h:inputText id="email" class="email" value="#{signup.sgn.email}" a:placeholder="E-mail"></h:inputText>
+                    <br></br><br></br>
+                    <h:outputText value="#{msg['signup.password']}" />
+                    <h:inputSecret id="password" class="password" value="#{signup.sgn.password}" a:placeholder="Password"></h:inputSecret>
+                    <br></br><br></br>
+                    <h:outputText value="#{msg['signup.passwordverify']}" />
+                    <h:inputSecret id="verifypassword" class="verifypassword" value="#{signup.sgn.verifypassword}" a:placeholder="Verify Password"></h:inputSecret>
+                    <br></br><br></br>
+                    <h:message for="sifre"></h:message>
+                    <br></br><br></br>
+                    <h:commandButton id="signupBtn" class="button1" value="#{msg['signup.save']}" actionListener="#{signup.saveProfile}" />
+                </h:panelGroup>
+            </div>
+            <h:outputStylesheet library="css" name="signupstyle.css"/>
+        </h:form>
+    </h:body>
+</html>
