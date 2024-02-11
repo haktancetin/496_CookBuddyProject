@@ -5,13 +5,17 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@drawable/foodbackground">
-
+    android:background="@drawable/foodbackground"
+    android:weightSum="4">
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="2.5"/>
     <TextView
         android:id="@+id/tvCookBuddy"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="600sp"
+        android:layout_height="0dp"
+        android:layout_weight="0.5"
         android:fontFamily="@font/covered_by_your_grace"
         android:paddingRight="10dp"
         android:text="@string/COOKBUDDY"
@@ -24,8 +28,8 @@
     <TextView
         android:id="@+id/tvGetStart"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:clickable="true"
         android:fontFamily="@font/bad_script"
         android:onClick="onClick"
