@@ -1,3 +1,4 @@
+# import box
 import json
 import uuid
 import streamlit as st
@@ -7,8 +8,12 @@ import os
 inference_server_url = "http://placeholder.ngrok"
 recipe_server_url = "http://127.0.0.1:5000"
 
-def get_generated_recipe(ingredients:list):
+def get_generated_recipe(ingredients: list):
     response = requests.get(url=recipe_server_url+"/generate_recipe", params={"ingredients": ingredients})
+    return response.json()
+
+def get_query_response(string: str):
+    response = requests.get(url=recipe_server_url+"/generate_recipe", params={"str": string})
     return response.json()
 
 
@@ -23,7 +28,7 @@ st.title("CookBuddy ChatBot :female-cook:")
 image_file = st.file_uploader("Upload an image of ingredients", type=["jpg", "png", "jpeg"])
 
 with st.form('my_form'):
-    text = st.text_area('Enter text:', 'Please enter a cooking/nutrition related query?')
+    text = st.text_area('Enter text:', 'Please enter a cooking/nutrition related query...')
     submitted = st.form_submit_button('Submit')
     # if not openai_api_key.startswith('sk-'):
     #     st.warning('Please enter your OpenAI API key!', icon='⚠')
