@@ -1,0 +1,7 @@
+auth_tokens:
+  ngrok:
+  spoonacular:
+
+external_urls:
+  inference:
+  local_recipe:
