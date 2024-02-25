@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 5
+names: ['apple', 'banana', 'broccoli', 'cauliflower', 'tomato']
+
+roboflow:
+  workspace: machine-learning-bv81o
+  project: fridge-ow48j
+  version: 2
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/machine-learning-bv81o/fridge-ow48j/dataset/2
