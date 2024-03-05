@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel= "stylesheet" type= "text/css" href="{{url_for('static', filename='styles/loginstyle.css')}}">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Covered+By+Your+Grace&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1 class="cookbuddy-header">COOKBUDDY</h1>
+    <div class="login-screen">    
+        <form class="login" method="POST" action="{{ url_for('login') }}">
+            <h2 class="login-text">Login</h2> 
+            <div class="login-box">
+                <input type="text"id="username" name="username" placeholder="Username">
+                <i class='bx bxs-user'></i>
+            </div>
+            <div class="login-box">
+                <input type="password"id="password" name="password" placeholder="Password">
+                    <i class='bx bxs-lock' ></i>
+            </div>
+                <button type="submit" class='btn' name=Login" value= "Login"  >Login</button><br><br>
+                <button type="submit"  class='btn'name="Sign Up" value= "Sign Up"  action="{{ url_for('signup') }}">Sign Up</button>
+        </form>
+    </div> 
+</body>
+</html>

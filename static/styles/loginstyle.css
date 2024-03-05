@@ -1,0 +1,85 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Covered+By+Your+Grace&display=swap');
+
+
+body, h1, h2, p, input, button {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    
+    background-image: url(/static/image/lgnbackground.jpg);
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.cookbuddy-header {
+    text-align: center;
+    margin-top: 70px;
+    font-size: 4em;
+    color: black;
+    font-family: 'Covered By Your Grace', cursive;
+}
+
+.login-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 60vh;
+}
+
+.login {
+    background-color:transparent;
+    padding: 40px 60px 40px 40px;
+    border-radius: 10px;
+    border-color: black;
+    box-shadow: 0 0 40px black;
+}
+
+.login-text {
+    text-align: center;
+    color: black;
+    font-family:Arial, Helvetica, sans-serif;
+    font-size: 2em;
+}
+
+.login-box {
+    position: relative;
+    margin-bottom: 20px;
+    border-radius: 30px;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px solid #000000;
+    border-radius: 4px;
+}
+
+i {
+    position: absolute;
+    top: 60%;
+    right: 10px;
+    transform: translateY(-50%);
+    color: #888;
+}
+
+.btn {
+    width: 100%;
+    padding: 10px;
+    background-color: black;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.btn:hover{
+    background-color: #FFC529;
+    color: black;
+}
+
+
+
