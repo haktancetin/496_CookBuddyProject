@@ -5,3 +5,4 @@ auth_tokens:
 external_urls:
   inference:
   local_recipe:
+  ngrok_url:
