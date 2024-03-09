@@ -1,14 +1,17 @@
-import os
-import psycopg2
-from flask import Flask, render_template, request, redirect, url_for, flash
+import config
+import requests
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from dbcontrol import password_validation, password_hash
+
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:melin123@localhost/postgres'
+app.config['SQLALCHEMY_DATABASE_URI'] = config.db_url
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+API_KEY = config.Api_Key
 
 
 class User(db.Model):
@@ -17,7 +20,7 @@ class User(db.Model):
     username = db.Column(db.String())
     email = db.Column(db.String())
     ages = db.Column(db.Integer())
-    password = db.Column(db.String())
+    password = db.Column(db.LargeBinary)
     firstname = db.Column(db.String())
     lastname = db.Column(db.String())
 
@@ -43,7 +46,7 @@ def login():
             return redirect(url_for('signup'))
         else:
             user = User.query.filter_by(username=username).first()
-            if user and user.password == password:
+            if user and password_validation(password,user.password):
                 return redirect(url_for('home'))
             else:
                 return redirect(url_for('login'))
@@ -66,9 +69,13 @@ def signup():
             if user and user.username == username:
                 return redirect(url_for('signup'))
             else:
-                user = User(username, email, ages, password, firstname, lastname)
-                db.session.add(user)
-                db.session.commit()
+                if password!=verifypassword:
+                    return redirect(url_for('signup'))
+                else:
+                    hpass=password_hash(password)
+                    user = User(username, email, ages, hpass, firstname, lastname)
+                    db.session.add(user)
+                    db.session.commit()
                 return redirect(url_for('home'))
     return render_template('signup.html')
 
@@ -104,6 +111,27 @@ def profile():
                 db.session.commit()
                 return redirect(url_for('home'))
     return render_template('profile.html')
+
+
+@app.route("/recipegenerator", methods=['POST', 'GET'])
+def recipegenerator():
+    return redirect("http://localhost:8501")
+
+
+def get_random_recipe(number=10):
+    url = f'https://api.spoonacular.com/recipes/random?apiKey={API_KEY}&number=100'
+    response = requests.get(url)
+    if response.status_code == 200:
+        recipe_data = response.json()
+        return recipe_data['recipes']
+    else:
+        return []
+
+
+@app.route("/randomrecipe", methods=['POST', 'GET'])
+def randomrecipe():
+    recipes = get_random_recipe(number=10)
+    return render_template('randomrecipe.html', recipes=recipes)
 
 
 @app.route("/user", methods=['POST', 'GET'])

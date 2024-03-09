@@ -4,6 +4,8 @@
 body {
     margin: 0;
     font-family: 'Playpen Sans', cursive;
+    height:100vh;
+	position: relative;
 }
 
 .navbar-home {
