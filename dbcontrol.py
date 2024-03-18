@@ -11,6 +11,7 @@ def password_hash(password):
 
 
 def password_validation(password, phashed):
+
     password_encode = password.encode('utf-8')
 
     check = bcrypt.checkpw(password_encode, phashed)

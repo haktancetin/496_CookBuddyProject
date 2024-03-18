@@ -1,155 +1,67 @@
-import config
-import requests
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from flask_migrate import Migrate
-from flask_sqlalchemy import SQLAlchemy
+import psycopg2
+import streamlit as st
+
+import toml
 from dbcontrol import password_validation, password_hash
 
-
-app = Flask(__name__)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = config.db_url
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-API_KEY = config.Api_Key
-
-
-class User(db.Model):
-    __tablename__ = 'userinfo'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String())
-    email = db.Column(db.String())
-    ages = db.Column(db.Integer())
-    password = db.Column(db.LargeBinary)
-    firstname = db.Column(db.String())
-    lastname = db.Column(db.String())
-
-    def __init__(self, username, email, ages, password, firstname, lastname):
-        self.username = username
-        self.email = email
-        self.ages = ages
-        self.password = password
-        self.firstname = firstname
-        self.lastname = lastname
-
-    def __repr__(self):
-        return f"<User {self.username}>"
+secrets = toml.load("secrets.toml")
+postgres = secrets["postgres"]
+try:
+    conn = psycopg2.connect(
+        database=postgres["database"],
+        user=postgres["user"],
+        host=postgres["host"],
+        port=postgres["port"],
+        password=postgres["password"]
+    )
+except Exception as e:
+    st.error(f"Error database connection{e}")
+curr = conn.cursor()
 
 
-@app.route("/")
-@app.route("/login", methods=['POST', 'GET'])
+def user_control(username, passwrd):
+    query = f"SELECT * FROM userinfo WHERE username='{username}';"
+    curr.execute(query)
+    user = curr.fetchone()
+    curr.close()
+    if user:
+        password = user[4]
+        if password_validation(passwrd, bytes(password)):
+            return True
+    return False
+
+
+def user_add(username, password, email, age, firstname, lastname):
+    hashed_pass = password_hash(password)
+    query = f"INSERT INTO userinfo(username,password,email,ages,firstname,lastname) VALUES ('{username}','{password}','{email}','{age}','{firstname}','{lastname}')"
+    curr.execute(query)
+    conn.commit()
+
+
 def login():
-    if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
-        username = request.form['username']
-        password = request.form['password']
-        if 'Sign Up' in request.form:
-            return redirect(url_for('signup'))
-        else:
-            user = User.query.filter_by(username=username).first()
-            if user and password_validation(password,user.password):
-                return redirect(url_for('home'))
+    title = '<span style="font-size:30px;">Welcome to:**COOKBUDDY**</span>'
+    st.markdown(title, unsafe_allow_html=True)
+    sbox = st.selectbox('Login/Sign Up', ['Login', 'Sign Up'])
+    if sbox == 'Login':
+        st.markdown("**LOGIN**")
+        username = st.text_input('Username', placeholder='Enter your username')
+        password = st.text_input('Password', placeholder='Enter your password', type='password')
+        if st.button('Login'):
+            if user_control(username, password):
+                st.success("logged")
             else:
-                return redirect(url_for('login'))
-    return render_template('login.html')
+                st.error("error")
+    if sbox == 'Sign Up':
+        st.markdown("**Sign Up**")
+        username = st.text_input('Username', placeholder='Enter your username')
+        password = st.text_input('Password', placeholder='Enter your password', type='password')
+        email = st.text_input('Email', placeholder='Enter your email')
+        age = st.text_input('Age', placeholder='Enter your age')
+        firstname = st.text_input('Firstname', placeholder='Enter your firstname')
+        lastname = st.text_input('Lastname', placeholder='Enter your lastname')
+        if st.button('Sign Up'):
+            user_add(username, password, email, age, firstname, lastname)
 
 
-@app.route("/signup", methods=['POST', 'GET'])
-def signup():
-    if request.method == 'POST' and 'username' in request.form and 'email' in request.form and 'ages' in request.form and 'password' in request.form and 'firstname' in request.form and 'lastname' in request.form and 'verifypassword' in request.form:
-        username = request.form['username']
-        email = request.form['email']
-        ages = int(request.form['ages'])
-        password = request.form['password']
-        firstname = request.form['firstname']
-        lastname = request.form['lastname']
-        verifypassword = request.form['verifypassword']
-        user = User.query.filter_by(username=username).first()
-
-        if 'Sign Up' in request.form:
-            if user and user.username == username:
-                return redirect(url_for('signup'))
-            else:
-                if password!=verifypassword:
-                    return redirect(url_for('signup'))
-                else:
-                    hpass=password_hash(password)
-                    user = User(username, email, ages, hpass, firstname, lastname)
-                    db.session.add(user)
-                    db.session.commit()
-                return redirect(url_for('home'))
-    return render_template('signup.html')
-
-
-@app.route("/home", methods=['POST', 'GET'])
-def home():
-    if 'Profile' in request.form:
-        return redirect(url_for('profile'))
-    return render_template('home.html')
-
-
-@app.route("/profile", methods=['POST', 'GET'])
-def profile():
-    if request.method == 'POST' and 'username' in request.form and 'email' in request.form and 'ages' in request.form and 'password' in request.form and 'firstname' in request.form and 'lastname' in request.form and 'verifypassword' in request.form:
-        username = request.form['username']
-        email = request.form['email']
-        ages = int(request.form['ages'])
-        password = request.form['password']
-        firstname = request.form['firstname']
-        lastname = request.form['lastname']
-        verifypassword = request.form['verifypassword']
-        user = User.query.filter_by(username=username).first()
-
-        if 'Save' in request.form:
-            if user and user.username == username:
-                return redirect(url_for('profile'))
-            else:
-                user.email = email
-                user.ages = ages
-                user.password = password
-                user.firstname = firstname
-                user.lastname = lastname
-                db.session.commit()
-                return redirect(url_for('home'))
-    return render_template('profile.html')
-
-
-@app.route("/recipegenerator", methods=['POST', 'GET'])
-def recipegenerator():
-    return redirect("http://localhost:8501")
-
-
-def get_random_recipe(number=10):
-    url = f'https://api.spoonacular.com/recipes/random?apiKey={API_KEY}&number=100'
-    response = requests.get(url)
-    if response.status_code == 200:
-        recipe_data = response.json()
-        return recipe_data['recipes']
-    else:
-        return []
-
-
-@app.route("/randomrecipe", methods=['POST', 'GET'])
-def randomrecipe():
-    recipes = get_random_recipe(number=10)
-    return render_template('randomrecipe.html', recipes=recipes)
-
-
-@app.route("/user", methods=['POST', 'GET'])
-def user():
-    if request.method == 'GET':
-        users = User.query.all()
-        results = [
-            {
-                "username": u.username,
-                "email": u.email,
-                "ages": u.ages,
-                "password": u.password,
-                "firstname": u.firstname,
-                "lastname": u.lastname
-            } for u in users]
-
-        return {"count": len(results), "users": results}
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    login()
