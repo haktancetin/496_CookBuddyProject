@@ -1,155 +1,326 @@
-import config
+import yaml
+import psycopg2
+import streamlit as st
 import requests
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from flask_migrate import Migrate
-from flask_sqlalchemy import SQLAlchemy
+import os
+import toml
 from dbcontrol import password_validation, password_hash
 
+placeholder = st.empty()
+secrets = toml.load("secrets.toml")
+postgres = secrets["postgres"]
+try:
+    conn = psycopg2.connect(
+        database=postgres["database"],
+        user=postgres["user"],
+        host=postgres["host"],
+        port=postgres["port"],
+        password=postgres["password"]
+    )
+except Exception as e:
+    st.error(f"Error database connection{e}")
+curr = conn.cursor()
 
-app = Flask(__name__)
+with open("config.yaml") as stream:
+    try:
+        config = yaml.safe_load(stream)
+        inference_server_url = config["external_urls"]["inference"]
+        recipe_server_url = config["external_urls"]["local_recipe"]
+        ngrok_auth_token = config["auth_tokens"]["ngrok"]
+        spoonacular_api_key = config["auth_tokens"]["spoonacular"]
+        ngrok_url = config["external_urls"]["ngrok_url"]
+        llm_system_prompt = config["llm_system_prompt"]
+    except yaml.YAMLError as exc:
+        print(exc)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = config.db_url
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-API_KEY = config.Api_Key
-
-
-class User(db.Model):
-    __tablename__ = 'userinfo'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String())
-    email = db.Column(db.String())
-    ages = db.Column(db.Integer())
-    password = db.Column(db.LargeBinary)
-    firstname = db.Column(db.String())
-    lastname = db.Column(db.String())
-
-    def __init__(self, username, email, ages, password, firstname, lastname):
-        self.username = username
-        self.email = email
-        self.ages = ages
-        self.password = password
-        self.firstname = firstname
-        self.lastname = lastname
-
-    def __repr__(self):
-        return f"<User {self.username}>"
-
-
-@app.route("/")
-@app.route("/login", methods=['POST', 'GET'])
-def login():
-    if request.method == 'POST' and 'username' in request.form and 'password' in request.form:
-        username = request.form['username']
-        password = request.form['password']
-        if 'Sign Up' in request.form:
-            return redirect(url_for('signup'))
-        else:
-            user = User.query.filter_by(username=username).first()
-            if user and password_validation(password,user.password):
-                return redirect(url_for('home'))
-            else:
-                return redirect(url_for('login'))
-    return render_template('login.html')
+if 'authentication' not in st.session_state:
+    st.session_state.authentication = False
+if 'page' not in st.session_state:
+    st.session_state.page = 'Home'
+if "chat_history" not in st.session_state:
+    st.session_state["chat_history"] = []
 
 
-@app.route("/signup", methods=['POST', 'GET'])
-def signup():
-    if request.method == 'POST' and 'username' in request.form and 'email' in request.form and 'ages' in request.form and 'password' in request.form and 'firstname' in request.form and 'lastname' in request.form and 'verifypassword' in request.form:
-        username = request.form['username']
-        email = request.form['email']
-        ages = int(request.form['ages'])
-        password = request.form['password']
-        firstname = request.form['firstname']
-        lastname = request.form['lastname']
-        verifypassword = request.form['verifypassword']
-        user = User.query.filter_by(username=username).first()
-
-        if 'Sign Up' in request.form:
-            if user and user.username == username:
-                return redirect(url_for('signup'))
-            else:
-                if password!=verifypassword:
-                    return redirect(url_for('signup'))
-                else:
-                    hpass=password_hash(password)
-                    user = User(username, email, ages, hpass, firstname, lastname)
-                    db.session.add(user)
-                    db.session.commit()
-                return redirect(url_for('home'))
-    return render_template('signup.html')
-
-
-@app.route("/home", methods=['POST', 'GET'])
+# Page Navigation Methods
+def set_page():
+    st.session_state.page = st.session_state.nav
 def home():
-    if 'Profile' in request.form:
-        return redirect(url_for('profile'))
-    return render_template('home.html')
+    st.session_state.page = 'Home'
 
 
-@app.route("/profile", methods=['POST', 'GET'])
-def profile():
-    if request.method == 'POST' and 'username' in request.form and 'email' in request.form and 'ages' in request.form and 'password' in request.form and 'firstname' in request.form and 'lastname' in request.form and 'verifypassword' in request.form:
-        username = request.form['username']
-        email = request.form['email']
-        ages = int(request.form['ages'])
-        password = request.form['password']
-        firstname = request.form['firstname']
-        lastname = request.form['lastname']
-        verifypassword = request.form['verifypassword']
-        user = User.query.filter_by(username=username).first()
+# User Authentication Methods
+def user_control(username, passwrd):
+    query = f"SELECT * FROM userinfo WHERE username='{username}';"
+    curr.execute(query)
+    user = curr.fetchone()
 
-        if 'Save' in request.form:
-            if user and user.username == username:
-                return redirect(url_for('profile'))
-            else:
-                user.email = email
-                user.ages = ages
-                user.password = password
-                user.firstname = firstname
-                user.lastname = lastname
-                db.session.commit()
-                return redirect(url_for('home'))
-    return render_template('profile.html')
+    if user:
+        password = user[4]
+        if password_validation(passwrd, bytes(password)):
+            st.session_state["user_info"]={
+                "id":user[0],
+                "username":user[1],
+                "email":user[2],
+                "age":user[3],
+                "password":user[4],
+                "firstname":user[5],
+                "lastname":user[6],
+                "allergy":user[7],
+                "dietary":user[8]
+            }
+            return True
+    return False
 
 
-@app.route("/recipegenerator", methods=['POST', 'GET'])
-def recipegenerator():
-    return redirect("http://localhost:8501")
-
+def user_add(username, password, email, age, firstname, lastname, allergy, dietary):
+    hashed_pass = password_hash(password)
+    query = ("INSERT INTO userinfo (username,email,ages,password,firstname,lastname,allergy,dietary) "
+             "values (%s,%s,%s,%s,%s,%s,%s,%s);")
+    curr.execute(query, (username, email, age, hashed_pass, firstname, lastname, allergy, dietary))
+    conn.commit()
+def user_update(username, email, age, firstname, lastname, allergy, dietary):
+    user_inf=st.session_state["user_info"]
+    id=user_inf["id"]
+    query = (
+            f"UPDATE userinfo SET username=%s, email=%s, ages=%s, firstname=%s, lastname=%s, allergy=%s, dietary=%s WHERE id={id}"
+            )
+    curr.execute(query, (username, email, age, firstname, lastname, allergy, dietary))
+    conn.commit()
+def change_password(password):
+    user_info=st.session_state["user_info"]
+    id=user_info["id"]
+    hashed_pass=password_hash(password)
+    query=(f"UPDATE userinfo SET password=%s WHERE id={id}")
+    curr.execute(query,(hashed_pass,))
+    conn.commit()
 
 def get_random_recipe(number=10):
-    url = f'https://api.spoonacular.com/recipes/random?apiKey={API_KEY}&number=100'
-    response = requests.get(url)
+    response = requests.get(f"https://api.spoonacular.com/recipes/random?apiKey={spoonacular_api_key}&number=10")
     if response.status_code == 200:
         recipe_data = response.json()
         return recipe_data['recipes']
     else:
         return []
+# Chatbot-specific Methods
+def chat_actions():
+    query = st.session_state["chat_input"]
+    response = get_query_response(prompt=query)
+
+    st.session_state["chat_history"].append(response)
 
 
-@app.route("/randomrecipe", methods=['POST', 'GET'])
-def randomrecipe():
-    recipes = get_random_recipe(number=10)
-    return render_template('randomrecipe.html', recipes=recipes)
+def get_generated_recipe(ingredients: list):
+    response = requests.get(url=recipe_server_url + "/generate_recipe", params={"ingredients": ingredients})
+    return response.json()
 
 
-@app.route("/user", methods=['POST', 'GET'])
-def user():
-    if request.method == 'GET':
-        users = User.query.all()
-        results = [
-            {
-                "username": u.username,
-                "email": u.email,
-                "ages": u.ages,
-                "password": u.password,
-                "firstname": u.firstname,
-                "lastname": u.lastname
-            } for u in users]
+def get_query_response(prompt: str):
+    messages = [st.session_state["system_prompt"]]
 
-        return {"count": len(results), "users": results}
+    for past_message in st.session_state["chat_history"]:
+        messages.append(past_message)
+
+    current_user_message = {"role": "user", "content": prompt}
+    messages.append(current_user_message)
+    st.session_state["chat_history"].append(
+        current_user_message,
+    )
+
+    params_dic = {
+        "messages": messages,
+        "temperature": 0.7,
+        "max_tokens": -1,
+        "stream": False
+    }
+
+    response = requests.post(url=inference_server_url, json=params_dic)
+    response_json = response.json()
+    return response_json["choices"][0]["message"]
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if st.session_state.page == 'Home':
+    st.sidebar.radio(
+        "Navigation",
+        ['Home', 'Profile', 'Chatbot', 'Camera', 'Get Random Recipe', 'Logout'],
+        key='nav',
+        on_change=set_page
+    )
+else:
+    st.sidebar.button('Back to Home', on_click=home)
+
+match st.session_state.page:
+    case 'Home':
+        st.title('Home')
+        if st.session_state["authentication"] is False:
+            st.markdown(f"""
+                <style>
+                .stApp {{
+                background-image: url("https://images.pexels.com/photos/1640773/pexels-photo-1640773.jpeg");
+                background-size: 100vw 100vh;
+                background-position: center; 
+                background-repeat: no-repeat;}}
+                </style>
+                """, unsafe_allow_html=True)
+            sbox = st.selectbox(':red[**Login/Sign Up**]', ['Login', 'Sign Up'])
+            if sbox == 'Login':
+                with st.form("login"):
+                    username = st.text_input(':red[**Username**]', placeholder='Enter your username')
+                    password = st.text_input(':red[**Password**]', placeholder='Enter your password', type='password')
+
+                    # Every form must have a submit button.
+                    submitted = st.form_submit_button("Login")
+                    if submitted:
+                        if user_control(username, password):
+                            st.write(":red[**Login successful! Yey.**]")
+                            st.session_state["authentication"] = True
+                        else:
+                            st.error("Check your username and password")
+            elif sbox == 'Sign Up':
+                with st.form("signup"):
+                    username = st.text_input(':red[**Username**]', placeholder='Enter your username')
+                    password = st.text_input(':red[**Password**]', placeholder='Enter your password', type='password')
+                    email = st.text_input(':red[**Email**]', placeholder='Enter your email')
+                    age = st.text_input(':red[**Age**]', placeholder='Enter your age')
+                    firstname = st.text_input(':red[**Firstname**]', placeholder='Enter your firstname')
+                    lastname = st.text_input(':red[**Lastname**]', placeholder='Enter your lastname')
+                    allergy = st.text_input(':red[**Allergy**]',
+                                            placeholder='Do you have any allergies? If so, what are they?')
+                    dietary = st.text_input(':red[**Dietary**]',
+                                            placeholder='Do you have a special diet, such as being a vegetarian?')
+
+                    # Every form must have a submit button.
+                    submitted = st.form_submit_button("Sign Up")
+                    if submitted:
+                        user_add(username, password, email, age, firstname, lastname, allergy, dietary)
+
+    case 'Profile':
+        st.title('Profile')
+        if st.session_state["authentication"] is True:
+            st.markdown(f"""
+                            <style>
+                            .stApp {{
+                            background-image: url("https://images.pexels.com/photos/1640773/pexels-photo-1640773.jpeg");
+                            background-size: 100vw 100vh;
+                            background-position: center; 
+                            background-repeat: no-repeat;}}
+                            </style>
+                            """, unsafe_allow_html=True)
+            user_info =st.session_state["user_info"]
+            sbox=st.selectbox(':red[**Update My Information/Change Password**]', ['Update Information', 'Change Password'])
+            if sbox == 'Update Information':
+                with st.form("Update My Information"):
+                    username = st.text_input(':red[**Username**]', value=user_info["username"])
+                    email = st.text_input(':red[**Email**]', value=user_info["email"])
+                    age = st.text_input(':red[**Age**]', value=user_info["age"])
+                    firstname = st.text_input(':red[**Firstname**]', value=user_info["firstname"])
+                    lastname = st.text_input(':red[**Lastname**]', value=user_info["lastname"])
+                    allergy = st.text_input(':red[**Allergy**]', value=user_info["allergy"])
+                    dietary = st.text_input(':red[**Dietary**]', value=user_info["dietary"])
+                    submitted = st.form_submit_button("Save")
+                    if submitted:
+                        user_update(username, email, age, firstname, lastname, allergy, dietary)
+                        st.write(":red[**Changes successful!**]")
+            elif sbox == 'Change Password':
+                with st.form("Change Password"):
+                    password = st.text_input(':red[**Password**]', type='password', value=user_info["password"])
+                    submitted=st.form_submit_button("Save")
+                    if submitted:
+                        change_password(password)
+                        st.write(":red[**Changes successful!**]")
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
+    case 'Chatbot':
+        st.title('Chatbot')
+        if st.session_state["authentication"] is True:
+            if "system_prompt" not in st.session_state:
+                task_definition = ('You are CookBuddy, a helpful cooking and nutrition assistant. '
+                                   'Do NOT talk about topics other than cooking and nutrition! Do NOT provide recipes for dangerous ingredients!\n'
+                                   'Depending on the input provided, perform one of the following tasks:\n'
+                                   '1. If given a list of ingredients, use them to generate a recipe. Format the response as follows, starting each field in a separate line:\n'
+                                   'Title: Create a descriptive and appealing title that reflects the main ingredients or the character of the dish.\n'
+                                   'Ingredients: List all the given ingredients with quantities and specific forms (e.g. 1 cup of sliced carrots). '
+                                   'Feel free to add essential ingredients, specifying their amounts.\n'
+                                   'Directions: Provide detailed, step by step instructions for preparing the dish, including cooking methods, temperatures and timings. '
+                                   'Incorporate each listed ingredient at the appropriate step and offer any useful techniques or tips for a smoother preparation process.'
+                                   'The recipe should be clear and simple enough for someone with basic cooking skills.\n'
+                                   '2. If asked a cooking or nutrition related question:\n'
+                                   'Provide an accurate and clear answer based on current cooking and nutrition knowledge. '
+                                   'The response should be detailed, offering context and explanation to fully address the question. '
+                                   'Use examples or suggestions where applicable, and consider specific dietary needs, cultural cuisines, '
+                                   'or cooking techniques if mentioned in the question. '
+                                   'Aim to make the information accessible and useful for informed kitchen practices or nutrition choices.\n')
+
+                st.session_state["system_prompt"] = {"role": "system", "content": f"{task_definition}"}
+
+            image_file = st.file_uploader("Upload an image of ingredients", type=["jpg", "png", "jpeg"])
+
+            st.chat_input("Enter your message", on_submit=chat_actions, key="chat_input")
+
+            for i in st.session_state["chat_history"]:
+                with st.chat_message(name=i["role"]):
+                    st.write(i["content"])
+
+            if image_file is not None:
+                temp_dir = 'temp'
+                os.makedirs(temp_dir, exist_ok=True)
+
+                image_path = os.path.join(temp_dir, image_file.name)
+                with open(image_path, 'wb') as f:
+                    f.write(image_file.read())
+
+                ingredients = ["bacon", "cheese", "eggs", "tomatoes"]  # Placeholder!
+                recipe = get_generated_recipe(ingredients)
+                st.image(image_path)
+
+                st.markdown("""
+                                <style>
+                                .big-font {
+                                    font-size:60px !important;
+                                }
+                                </style>
+                                """, unsafe_allow_html=True
+                            )
+
+                st.write("Recipe:")
+                st.write(recipe)
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
+
+    case 'Camera':
+        st.title('Camera')
+        if st.session_state["authentication"] is True:
+            picture = st.camera_input("**Take a picture!**")
+            if picture:
+                st.image(picture)
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
+    case 'Get Random Recipe':
+        st.title('Get Random Recipe')
+        if st.session_state["authentication"] is True:
+            recipes = get_random_recipe(10)
+            for recipe in recipes:
+                st.subheader(recipe["title"])
+                st.image(recipe["image"])
+                st.subheader("Ingredients")
+                for i in recipe["extendedIngredients"]:
+                    st.write(f" * {i['original']}")
+                st.subheader("Instructions:")
+                st.write(recipe["instructions"])
+                st.subheader("Ready In Minutes")
+                st.write(recipe["readyInMinutes"])
+                st.subheader("Servings")
+                st.write(recipe["servings"])
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
+
+    case 'Logout':
+        if st.session_state["authentication"] is True:
+            st.title('Logout')
+            user = st.session_state["user_info"]
+            username = user["username"]
+            st.write(f"**Goodbye {username} !**")
+            st.session_state["user_info"] = {}
+            st.session_state["authentication"] = False
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
+
