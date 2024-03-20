@@ -27,6 +27,7 @@ with open("config.yaml") as stream:
         inference_server_url = config["external_urls"]["inference"]
         recipe_server_url = config["external_urls"]["local_recipe"]
         ngrok_auth_token = config["auth_tokens"]["ngrok"]
+        spoonacular_api_key = config["auth_tokens"]["spoonacular"]
         ngrok_url = config["external_urls"]["ngrok_url"]
         llm_system_prompt = config["llm_system_prompt"]
     except yaml.YAMLError as exc:
@@ -56,22 +57,19 @@ def user_control(username, passwrd):
     if user:
         password = user[4]
         if password_validation(passwrd, bytes(password)):
+            st.session_state["user_info"]={
+                "id":user[0],
+                "username":user[1],
+                "email":user[2],
+                "age":user[3],
+                "password":user[4],
+                "firstname":user[5],
+                "lastname":user[6],
+                "allergy":user[7],
+                "dietary":user[8]
+            }
             return True
     return False
-
-
-def user_profile(username):
-    query = f"SELECT * FROM userinfo WHERE username='{username}';"
-    curr.execute(query)
-    user = curr.fetchone()
-    username = user[1]
-    email = user[2]
-    ages = user[3]
-    password = user[4]
-    firstname = user[5]
-    lastname = user[6]
-    allergy = user[7]
-    dietary = user[8]
 
 
 def user_add(username, password, email, age, firstname, lastname, allergy, dietary):
@@ -80,7 +78,29 @@ def user_add(username, password, email, age, firstname, lastname, allergy, dieta
              "values (%s,%s,%s,%s,%s,%s,%s,%s);")
     curr.execute(query, (username, email, age, hashed_pass, firstname, lastname, allergy, dietary))
     conn.commit()
+def user_update(username, email, age, firstname, lastname, allergy, dietary):
+    user_inf=st.session_state["user_info"]
+    id=user_inf["id"]
+    query = (
+            f"UPDATE userinfo SET username=%s, email=%s, ages=%s, firstname=%s, lastname=%s, allergy=%s, dietary=%s WHERE id={id}"
+            )
+    curr.execute(query, (username, email, age, firstname, lastname, allergy, dietary))
+    conn.commit()
+def change_password(password):
+    user_info=st.session_state["user_info"]
+    id=user_info["id"]
+    hashed_pass=password_hash(password)
+    query=(f"UPDATE userinfo SET password=%s WHERE id={id}")
+    curr.execute(query,(hashed_pass,))
+    conn.commit()
 
+def get_random_recipe(number=10):
+    response = requests.get(f"https://api.spoonacular.com/recipes/random?apiKey={spoonacular_api_key}&number=10")
+    if response.status_code == 200:
+        recipe_data = response.json()
+        return recipe_data['recipes']
+    else:
+        return []
 # Chatbot-specific Methods
 def chat_actions():
     query = st.session_state["chat_input"]
@@ -121,7 +141,7 @@ def get_query_response(prompt: str):
 if st.session_state.page == 'Home':
     st.sidebar.radio(
         "Navigation",
-        ['Home', 'Profile', 'Chatbot'],
+        ['Home', 'Profile', 'Chatbot', 'Camera', 'Get Random Recipe', 'Logout'],
         key='nav',
         on_change=set_page
     )
@@ -132,6 +152,15 @@ match st.session_state.page:
     case 'Home':
         st.title('Home')
         if st.session_state["authentication"] is False:
+            st.markdown(f"""
+                <style>
+                .stApp {{
+                background-image: url("https://images.pexels.com/photos/1640773/pexels-photo-1640773.jpeg");
+                background-size: 100vw 100vh;
+                background-position: center; 
+                background-repeat: no-repeat;}}
+                </style>
+                """, unsafe_allow_html=True)
             sbox = st.selectbox(':red[**Login/Sign Up**]', ['Login', 'Sign Up'])
             if sbox == 'Login':
                 with st.form("login"):
@@ -142,7 +171,7 @@ match st.session_state.page:
                     submitted = st.form_submit_button("Login")
                     if submitted:
                         if user_control(username, password):
-                            st.write("Login successful! Yey.")
+                            st.write(":red[**Login successful! Yey.**]")
                             st.session_state["authentication"] = True
                         else:
                             st.error("Check your username and password")
@@ -167,17 +196,39 @@ match st.session_state.page:
     case 'Profile':
         st.title('Profile')
         if st.session_state["authentication"] is True:
-            with st.form("**Profile**"):
-                username = st.text_input(':red[**Username**]')
-                password = st.text_input(':red[**Password**]', type='password')
-                email = st.text_input(':red[**Email**]')
-                age = st.text_input(':red[**Age**]')
-                firstname = st.text_input(':red[**Firstname**]')
-                lastname = st.text_input(':red[**Lastname**]')
-                allergy = st.text_input(':red[**Allergy**]')
-                dietary = st.text_input(':red[**Dietary**]')
-                st.form_submit_button("Save")
-
+            st.markdown(f"""
+                            <style>
+                            .stApp {{
+                            background-image: url("https://images.pexels.com/photos/1640773/pexels-photo-1640773.jpeg");
+                            background-size: 100vw 100vh;
+                            background-position: center; 
+                            background-repeat: no-repeat;}}
+                            </style>
+                            """, unsafe_allow_html=True)
+            user_info =st.session_state["user_info"]
+            sbox=st.selectbox(':red[**Update My Information/Change Password**]', ['Update Information', 'Change Password'])
+            if sbox == 'Update Information':
+                with st.form("Update My Information"):
+                    username = st.text_input(':red[**Username**]', value=user_info["username"])
+                    email = st.text_input(':red[**Email**]', value=user_info["email"])
+                    age = st.text_input(':red[**Age**]', value=user_info["age"])
+                    firstname = st.text_input(':red[**Firstname**]', value=user_info["firstname"])
+                    lastname = st.text_input(':red[**Lastname**]', value=user_info["lastname"])
+                    allergy = st.text_input(':red[**Allergy**]', value=user_info["allergy"])
+                    dietary = st.text_input(':red[**Dietary**]', value=user_info["dietary"])
+                    submitted = st.form_submit_button("Save")
+                    if submitted:
+                        user_update(username, email, age, firstname, lastname, allergy, dietary)
+                        st.write(":red[**Changes successful!**]")
+            elif sbox == 'Change Password':
+                with st.form("Change Password"):
+                    password = st.text_input(':red[**Password**]', type='password', value=user_info["password"])
+                    submitted=st.form_submit_button("Save")
+                    if submitted:
+                        change_password(password)
+                        st.write(":red[**Changes successful!**]")
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
     case 'Chatbot':
         st.title('Chatbot')
         if st.session_state["authentication"] is True:
@@ -232,4 +283,44 @@ match st.session_state.page:
 
                 st.write("Recipe:")
                 st.write(recipe)
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
+
+    case 'Camera':
+        st.title('Camera')
+        if st.session_state["authentication"] is True:
+            picture = st.camera_input("**Take a picture!**")
+            if picture:
+                st.image(picture)
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
+    case 'Get Random Recipe':
+        st.title('Get Random Recipe')
+        if st.session_state["authentication"] is True:
+            recipes = get_random_recipe(10)
+            for recipe in recipes:
+                st.subheader(recipe["title"])
+                st.image(recipe["image"])
+                st.subheader("Ingredients")
+                for i in recipe["extendedIngredients"]:
+                    st.write(f" * {i['original']}")
+                st.subheader("Instructions:")
+                st.write(recipe["instructions"])
+                st.subheader("Ready In Minutes")
+                st.write(recipe["readyInMinutes"])
+                st.subheader("Servings")
+                st.write(recipe["servings"])
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
+
+    case 'Logout':
+        if st.session_state["authentication"] is True:
+            st.title('Logout')
+            user = st.session_state["user_info"]
+            username = user["username"]
+            st.write(f"**Goodbye {username} !**")
+            st.session_state["user_info"] = {}
+            st.session_state["authentication"] = False
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
 
