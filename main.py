@@ -114,6 +114,54 @@ def chat_actions():
 
     st.session_state["chat_history"].append(response)
 
+    response_text = response["content"]
+
+    recipe_parser(response_text)
+
+def recipe_parser(chat_conversation):
+    title = ""
+    ingredients = []
+    directions = []
+    title_control = False
+    ingredients_control = False
+    directions_control = False
+    section = None
+
+    lines = chat_conversation.split('\n')
+
+    for parse in lines:
+        if not parse.strip():
+            continue
+
+        if "Title:" in parse:
+            title = parse.replace("Title:", "").strip()
+            section = "title"
+            title_control = True
+
+        elif "Ingredients:" in parse:
+            section = "ingredients"
+            ingredients_control = True
+
+        elif "Directions:" in parse:
+            section = "directions"
+            directions_control = True
+
+        else:
+            if section == "ingredients":
+                ingredients.append(parse.strip())
+            elif section == "directions":
+                directions.append(parse.strip())
+
+    if title_control and ingredients_control and directions_control:
+        recipe_dp(title,ingredients,directions)
+        return title, ingredients, directions
+def recipe_dp(title,ingredients,directions):
+    query = (
+        "INSERT INTO recipe (title, ingredients, directions) "
+        "values (%s,%s,%s);")
+    curr.execute(query,
+                 (title, ingredients, directions))
+    conn.commit()
 
 def get_generated_recipe(ingredients: list):
     response = requests.get(url=recipe_server_url + "/generate_recipe", params={"ingredients": ingredients})
