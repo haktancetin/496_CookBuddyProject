@@ -108,8 +108,9 @@ def chat_actions():
 
     st.session_state["chat_history"].append(response)
 
-    chat_conversation = st.session_state["chat_history"][-1]
-    recipe_parser(chat_conversation)
+    response_text = response["content"]
+
+    recipe_parser(response_text)
 
 def recipe_parser(chat_conversation):
     title = ""
