@@ -106,7 +106,40 @@ def get_random_recipe(number=10):
     else:
         return []
 
+def get_recipe_analyze(recipe_id):
+    url = f"https://api.spoonacular.com/recipes/{recipe_id}/analyzedInstructions?apiKey={spoonacular_api_key}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        if data:
+            if 'steps' in data[0]:
+                return data[0]['steps']
+    return []
+def get_recipe_nutrition(recipe_id):
+    url = f"https://api.spoonacular.com/recipes/{recipe_id}/nutritionWidget.json"
+    params = {"apiKey":spoonacular_api_key}
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        return data
+    else:
+        return []
 
+def get_recipe_by_nutrients(minCal, maxCal, minCarbs, maxCarbs, minProtein, maxProtein):
+    url = f"https://api.spoonacular.com/recipes/findByNutrients?minCalories={minCal}&maxCalories={maxCal}&minCarbs={minCarbs}&maxCarbs={maxCarbs}&minProtein={minProtein}&maxProtein={maxProtein}&apiKey={spoonacular_api_key}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return data
+    return []
+
+def convertAmounts(ingredientName, sourceAmount, sourceUnit, targetUnit):
+    response = requests.get(f"https://api.spoonacular.com/recipes/convert?ingredientName={ingredientName}&sourceAmount={sourceAmount}&sourceUnit={sourceUnit}&targetUnit={targetUnit}&apiKey={spoonacular_api_key}")
+    if response.status_code == 200:
+        convert_data = response.json()
+        return convert_data['answer']
+    else:
+        return []
 # Chatbot-specific Methods
 def chat_actions():
     query = st.session_state["chat_input"]
@@ -195,7 +228,8 @@ def get_query_response(prompt: str):
 if st.session_state.page == 'Home':
     st.sidebar.radio(
         "Navigation",
-        ['Home', 'Profile', 'Chatbot', 'Camera', 'Get Random Recipe', 'Logout'],
+        ['Home', 'Profile', 'Chatbot', 'Camera', 'Get Random Recipe', 'Search Random Recipes by Nutrients',
+         'Convert Amounts', 'Logout'],
         key='nav',
         on_change=set_page
     )
@@ -374,16 +408,88 @@ match st.session_state.page:
             recipes = get_random_recipe(10)
             for recipe in recipes:
                 st.subheader(recipe["title"])
-                st.image(recipe["image"])
+                if recipe["image"]:
+                    st.image(recipe["image"])
                 st.subheader("Ingredients")
                 for i in recipe["extendedIngredients"]:
                     st.write(f" * {i['original']}")
-                st.subheader("Instructions:")
-                st.write(recipe["instructions"])
-                st.subheader("Ready In Minutes")
-                st.write(recipe["readyInMinutes"])
-                st.subheader("Servings")
-                st.write(recipe["servings"])
+                if recipe["readyInMinutes"]:
+                    st.subheader("Ready In Minutes")
+                    st.write(recipe["readyInMinutes"])
+                if recipe["servings"]:
+                    st.subheader("Servings")
+                    st.write(recipe["servings"])
+                recipe_id = recipe["id"]
+                instructions = get_recipe_analyze(recipe_id)
+                if instructions:
+                    st.subheader("Instructions")
+                    for step in instructions:
+                        st.write(f"{step['number']}- {step['step']}")
+                else:
+                    st.write("Instructions are not found")
+                nutrition = get_recipe_nutrition(recipe_id)
+                if nutrition:
+                    st.subheader("Nutrition")
+                    st.write(f"Calories: {nutrition['calories']}")
+                    st.write(f"Carbs: {nutrition['carbs']}")
+                    st.write(f"Fat: {nutrition['fat']}")
+                    st.write(f"Protein: {nutrition['protein']}")
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
+    case 'Search Random Recipes by Nutrients':
+        if st.session_state["authentication"] is True:
+            with st.form("nutrients"):
+                st.title('Search Random Recipes by Nutrients')
+                valuesCal = st.slider(
+                    'Select a range of calories',
+                    0, 10000, (0, 75))
+                minCal, maxCal = valuesCal
+                valuesCarb = st.slider(
+                    'Select a range of carbs',
+                    0, 10000, (0, 75))
+                minCarb, maxCarb = valuesCarb
+                valuesPro = st.slider(
+                    'Select a range of protein',
+                    0, 10000, (0, 75))
+                minPro, maxPro = valuesPro
+                submitted = st.form_submit_button("Search")
+                if submitted:
+                    recipe = get_recipe_by_nutrients(minCal, maxCal, minCarb, maxCarb, minPro, maxPro)
+                    if recipe:
+                        for r in recipe:
+                            st.subheader(r["title"])
+                            st.write(f"Calories: {r['calories']}")
+                            st.write(f"Carbs: {r['carbs']}")
+                            st.write(f"Fat: {r['fat']}")
+                            st.write(f"Protein: {r['protein']}")
+                            recipe_id = r["id"]
+                            instructions = get_recipe_analyze(recipe_id)
+                            if instructions:
+                                st.subheader("Instructions")
+                                for step in instructions:
+                                    st.write(f"{step['number']}- {step['step']}")
+                            else:
+                                st.write("Instructions are not found")
+                    else:
+                        st.write("No recipe found matching the search criteria")
+        else:
+            st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
+
+    case 'Convert Amounts':
+        if st.session_state["authentication"] is True:
+            with st.form ("convertAmounts"):
+                st.title('Convert Amounts')
+                ingredientName = st.text_input(':red[**Ingredient Name**]',
+                                             placeholder='Please enter the ingredient name to be converted')
+                sourceAmount = st.text_input(':red[**Source Amount**]', placeholder='Please enter the value to be converted')
+                sourceUnit = st.selectbox(':red[**Source Unit**]',
+                                    ['piece', 'cups', 'grams', 'liter', 'tbsp'])
+                targetUnit = st.selectbox(':red[**Target Unit**]',
+                                          ['piece', 'cups', 'grams', 'liter', 'tbsp'])
+                submitted = st.form_submit_button("Convert")
+                if submitted:
+                    answer = convertAmounts(ingredientName, sourceAmount, sourceUnit, targetUnit)
+                    st.write(answer)
         else:
             st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
 
