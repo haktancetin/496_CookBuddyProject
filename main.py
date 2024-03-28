@@ -5,7 +5,16 @@ import requests
 import os
 import toml
 from dbcontrol import password_validation, password_hash
-from os import environ
+from streamlit_javascript import st_javascript
+from user_agents import parse
+
+ua_string = st_javascript("""window.navigator.userAgent;""")
+while ua_string == 0:
+    st.stop()
+
+
+user_agent = parse(ua_string)
+st.session_state.is_session_pc = user_agent.is_pc
 
 placeholder = st.empty()
 secrets = toml.load("secrets.toml")
@@ -48,6 +57,8 @@ if "chat_history" not in st.session_state:
 # Page Navigation Methods
 def set_page():
     st.session_state.page = st.session_state.nav
+
+
 def home():
     st.session_state.page = 'Home'
 
@@ -61,7 +72,7 @@ def user_control(username, passwrd):
     if user:
         password = user[4]
         if password_validation(passwrd, bytes(password)):
-            st.session_state["user_info"]={
+            st.session_state["user_info"] = {
                 "id": user[0],
                 "username": user[1],
                 "email": user[2],
@@ -82,21 +93,26 @@ def user_add(username, password, email, age, firstname, lastname, allergy, dieta
              "values (%s,%s,%s,%s,%s,%s,%s,%s);")
     curr.execute(query, (username, email, age, hashed_pass, firstname, lastname, allergy, dietary))
     conn.commit()
+
+
 def user_update(username, email, age, firstname, lastname, allergy, dietary):
-    user_inf=st.session_state["user_info"]
-    id=user_inf["id"]
+    user_inf = st.session_state["user_info"]
+    id = user_inf["id"]
     query = (
-            f"UPDATE userinfo SET username=%s, email=%s, ages=%s, firstname=%s, lastname=%s, allergy=%s, dietary=%s WHERE id={id}"
-            )
+        f"UPDATE userinfo SET username=%s, email=%s, ages=%s, firstname=%s, lastname=%s, allergy=%s, dietary=%s WHERE id={id}"
+    )
     curr.execute(query, (username, email, age, firstname, lastname, allergy, dietary))
     conn.commit()
+
+
 def change_password(password):
-    user_info=st.session_state["user_info"]
-    id=user_info["id"]
-    hashed_pass=password_hash(password)
-    query=(f"UPDATE userinfo SET password=%s WHERE id={id}")
-    curr.execute(query,(hashed_pass,))
+    user_info = st.session_state["user_info"]
+    id = user_info["id"]
+    hashed_pass = password_hash(password)
+    query = (f"UPDATE userinfo SET password=%s WHERE id={id}")
+    curr.execute(query, (hashed_pass,))
     conn.commit()
+
 
 def get_random_recipe(number=10):
     response = requests.get(f"https://api.spoonacular.com/recipes/random?apiKey={spoonacular_api_key}&number=10")
@@ -105,6 +121,7 @@ def get_random_recipe(number=10):
         return recipe_data['recipes']
     else:
         return []
+
 
 def get_recipe_analyze(recipe_id):
     url = f"https://api.spoonacular.com/recipes/{recipe_id}/analyzedInstructions?apiKey={spoonacular_api_key}"
@@ -115,15 +132,18 @@ def get_recipe_analyze(recipe_id):
             if 'steps' in data[0]:
                 return data[0]['steps']
     return []
+
+
 def get_recipe_nutrition(recipe_id):
     url = f"https://api.spoonacular.com/recipes/{recipe_id}/nutritionWidget.json"
-    params = {"apiKey":spoonacular_api_key}
+    params = {"apiKey": spoonacular_api_key}
     response = requests.get(url, params=params)
     if response.status_code == 200:
         data = response.json()
         return data
     else:
         return []
+
 
 def get_recipe_by_nutrients(minCal, maxCal, minCarbs, maxCarbs, minProtein, maxProtein):
     url = f"https://api.spoonacular.com/recipes/findByNutrients?minCalories={minCal}&maxCalories={maxCal}&minCarbs={minCarbs}&maxCarbs={maxCarbs}&minProtein={minProtein}&maxProtein={maxProtein}&apiKey={spoonacular_api_key}"
@@ -133,13 +153,17 @@ def get_recipe_by_nutrients(minCal, maxCal, minCarbs, maxCarbs, minProtein, maxP
         return data
     return []
 
+
 def convertAmounts(ingredientName, sourceAmount, sourceUnit, targetUnit):
-    response = requests.get(f"https://api.spoonacular.com/recipes/convert?ingredientName={ingredientName}&sourceAmount={sourceAmount}&sourceUnit={sourceUnit}&targetUnit={targetUnit}&apiKey={spoonacular_api_key}")
+    response = requests.get(
+        f"https://api.spoonacular.com/recipes/convert?ingredientName={ingredientName}&sourceAmount={sourceAmount}&sourceUnit={sourceUnit}&targetUnit={targetUnit}&apiKey={spoonacular_api_key}")
     if response.status_code == 200:
         convert_data = response.json()
         return convert_data['answer']
     else:
         return []
+
+
 # Chatbot-specific Methods
 def chat_actions():
     query = st.session_state["chat_input"]
@@ -150,6 +174,7 @@ def chat_actions():
     response_text = response["content"]
 
     recipe_parser(response_text)
+
 
 def recipe_parser(chat_conversation):
     title = ""
@@ -186,15 +211,18 @@ def recipe_parser(chat_conversation):
                 directions.append(parse.strip())
 
     if title_control and ingredients_control and directions_control:
-        recipe_dp(title,ingredients,directions)
+        recipe_dp(title, ingredients, directions)
         return title, ingredients, directions
-def recipe_dp(title,ingredients,directions):
+
+
+def recipe_dp(title, ingredients, directions):
     query = (
         "INSERT INTO recipe (title, ingredients, directions) "
         "values (%s,%s,%s);")
     curr.execute(query,
                  (title, ingredients, directions))
     conn.commit()
+
 
 def get_generated_recipe(ingredients: list):
     response = requests.get(url=recipe_server_url + "/generate_recipe", params={"ingredients": ingredients})
@@ -294,7 +322,8 @@ match st.session_state.page:
                             </style>
                             """, unsafe_allow_html=True)
             user_info = st.session_state["user_info"]
-            sbox=st.selectbox(':red[**Update My Information/Change Password**]', ['Update Information', 'Change Password'])
+            sbox = st.selectbox(':red[**Update My Information/Change Password**]',
+                                ['Update Information', 'Change Password'])
             if sbox == 'Update Information':
                 with st.form("Update My Information"):
                     username = st.text_input(':red[**Username**]', value=user_info["username"])
@@ -311,7 +340,7 @@ match st.session_state.page:
             elif sbox == 'Change Password':
                 with st.form("Change Password"):
                     password = st.text_input(':red[**Password**]', type='password', value=user_info["password"])
-                    submitted=st.form_submit_button("Save")
+                    submitted = st.form_submit_button("Save")
                     if submitted:
                         change_password(password)
                         st.write(":red[**Changes successful!**]")
@@ -351,8 +380,6 @@ match st.session_state.page:
 
                 st.session_state["system_prompt"] = {"role": "system", "content": f"{task_definition}"}
 
-
-
             st.chat_input("Enter your message", on_submit=chat_actions, key="chat_input")
 
             for i in st.session_state["chat_history"]:
@@ -365,8 +392,8 @@ match st.session_state.page:
         st.title('Camera')
         if st.session_state["authentication"] is True:
 
-            if 'ANDROID_BOOTLOGO' in environ:
-                print("Running on Android!")
+            if st.session_state["is_session_pc"] is False:
+                print("Running on Mobile!")
                 picture = st.camera_input("**Take a picture!**")
                 if picture:
                     st.image(picture)
@@ -477,13 +504,14 @@ match st.session_state.page:
 
     case 'Convert Amounts':
         if st.session_state["authentication"] is True:
-            with st.form ("convertAmounts"):
+            with st.form("convertAmounts"):
                 st.title('Convert Amounts')
                 ingredientName = st.text_input(':red[**Ingredient Name**]',
-                                             placeholder='Please enter the ingredient name to be converted')
-                sourceAmount = st.text_input(':red[**Source Amount**]', placeholder='Please enter the value to be converted')
+                                               placeholder='Please enter the ingredient name to be converted')
+                sourceAmount = st.text_input(':red[**Source Amount**]',
+                                             placeholder='Please enter the value to be converted')
                 sourceUnit = st.selectbox(':red[**Source Unit**]',
-                                    ['piece', 'cups', 'grams', 'liter', 'tbsp'])
+                                          ['piece', 'cups', 'grams', 'liter', 'tbsp'])
                 targetUnit = st.selectbox(':red[**Target Unit**]',
                                           ['piece', 'cups', 'grams', 'liter', 'tbsp'])
                 submitted = st.form_submit_button("Convert")
@@ -503,4 +531,3 @@ match st.session_state.page:
             st.session_state["authentication"] = False
         else:
             st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
-
