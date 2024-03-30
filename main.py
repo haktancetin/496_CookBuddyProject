@@ -12,7 +12,6 @@ ua_string = st_javascript("""window.navigator.userAgent;""")
 while ua_string == 0:
     st.stop()
 
-
 user_agent = parse(ua_string)
 st.session_state.is_session_pc = user_agent.is_pc
 
@@ -39,7 +38,8 @@ with open("config.yaml") as stream:
         ngrok_auth_token = config["auth_tokens"]["ngrok"]
         spoonacular_api_key = config["auth_tokens"]["spoonacular"]
         ngrok_url = config["external_urls"]["ngrok_url"]
-        llm_system_prompt = config["llm_system_prompt"]
+        get_nutrition_from_generated_recipe_title = config["get_nutrition_from_generated_recipe_title"]
+        is_production = config["is_production"]
     except yaml.YAMLError as exc:
         print(exc)
 
@@ -48,11 +48,22 @@ if 'authentication' not in st.session_state:
     st.session_state.username = ""
     st.session_state.dietary_preferences = [""]
     st.session_state.allergies = [""]
+
 if 'page' not in st.session_state:
     st.session_state.page = 'Home'
+
 if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
 
+if is_production:
+    st.markdown("""
+        <style>
+            #MainMenu {visibility: hidden;}
+            .stDeployButton {display:none;}
+            footer {visibility: hidden;}
+            #stDecoration {display:none;}
+        </style>
+    """, unsafe_allow_html=True)
 
 # Page Navigation Methods
 def set_page():
@@ -114,6 +125,8 @@ def change_password(password):
     conn.commit()
 
 
+# Spoonacular API Endpoints
+
 def get_random_recipe(number=10):
     response = requests.get(f"https://api.spoonacular.com/recipes/random?apiKey={spoonacular_api_key}&number=10")
     if response.status_code == 200:
@@ -164,16 +177,46 @@ def convertAmounts(ingredientName, sourceAmount, sourceUnit, targetUnit):
         return []
 
 
+def get_nutrition_by_title(recipe_title: str):
+    response = requests.get(
+        f"https://api.spoonacular.com/recipes/guessNutrition?title={recipe_title}&apiKey={spoonacular_api_key}")
+    if response.status_code == 200:
+        convert_data = response.json()
+        return convert_data
+    else:
+        return []
+
+
 # Chatbot-specific Methods
 def chat_actions():
     query = st.session_state["chat_input"]
     response = get_query_response(prompt=query)
 
-    st.session_state["chat_history"].append(response)
-
     response_text = response["content"]
 
-    recipe_parser(response_text)
+    recipe_fields = recipe_parser(response_text)
+
+    if recipe_fields is not None and get_nutrition_from_generated_recipe_title is True:
+        recipe_information = get_nutrition_by_title(recipe_title=recipe_fields["title"])
+        if "status" not in recipe_information.keys():
+            response["content"].append(f"\nCalories: "
+                                       f"{recipe_information['calories']['value']} "
+                                       f"{recipe_information['calories']['unit']}\n")
+
+            response["content"].append(f"Carbs: "
+                                       f"{recipe_information['carbs']['value']} "
+                                       f"{recipe_information['carbs']['unit']}\n")
+
+            response["content"].append(f"Fat: "
+                                       f"{recipe_information['fat']['value']} "
+                                       f"{recipe_information['fat']['unit']}\n")
+
+            response["content"].append(f"Protein: "
+                                       f"{recipe_information['protein']['value']} "
+                                       f"{recipe_information['protein']['unit']}\n")
+
+    st.session_state["chat_history"].append(response)
+
 
 
 def recipe_parser(chat_conversation):
@@ -187,32 +230,39 @@ def recipe_parser(chat_conversation):
 
     lines = chat_conversation.split('\n')
 
-    for parse in lines:
-        if not parse.strip():
+    for response_line in lines:
+        if not response_line.strip():
             continue
 
-        if "Title:" in parse:
-            title = parse.replace("Title:", "").strip()
+        if "Title:" in response_line:
+            title = response_line.replace("Title:", "").strip()
             section = "title"
             title_control = True
 
-        elif "Ingredients:" in parse:
+        elif "Ingredients:" in response_line:
             section = "ingredients"
             ingredients_control = True
 
-        elif "Directions:" in parse:
+        elif "Directions:" in response_line or "Instructions:" in response_line:
             section = "directions"
             directions_control = True
 
         else:
             if section == "ingredients":
-                ingredients.append(parse.strip())
+                ingredients.append(response_line.strip())
             elif section == "directions":
-                directions.append(parse.strip())
+                directions.append(response_line.strip())
 
     if title_control and ingredients_control and directions_control:
         recipe_dp(title, ingredients, directions)
-        return title, ingredients, directions
+        result = {
+            "title": title,
+            "ingredients": ingredients,
+            "directions": directions
+        }
+        return result
+    else:
+        return None
 
 
 def recipe_dp(title, ingredients, directions):
@@ -224,7 +274,7 @@ def recipe_dp(title, ingredients, directions):
     conn.commit()
 
 
-def get_generated_recipe(ingredients: list):
+def get_recipe_from_image(ingredients: list):
     response = requests.get(url=recipe_server_url + "/generate_recipe", params={"ingredients": ingredients})
     return response.json()
 
@@ -411,7 +461,7 @@ match st.session_state.page:
                     f.write(image_file.read())
 
                 ingredients = ["bacon", "cheese", "eggs", "tomatoes"]  # Placeholder!
-                recipe = get_generated_recipe(ingredients)
+                recipe = get_recipe_from_image(ingredients)
                 st.image(image_path)
 
                 st.markdown("""
