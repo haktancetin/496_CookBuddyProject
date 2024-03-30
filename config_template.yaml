@@ -1,8 +1,11 @@
 auth_tokens:
-  ngrok:
-  spoonacular:
+  ngrok: authtoken_ngrok
+  spoonacular: apikey_spoonacular
 
 external_urls:
-  inference:
-  local_recipe:
-  ngrok_url:
+  inference: URL
+  local_recipe: URL
+  ngrok_url: URL
+
+get_nutrition_from_generated_recipe_title: bool
+is_production: bool
