@@ -501,13 +501,23 @@ match st.session_state.page:
             else:
                 print("Not running on Android!")
 
+            if "image_history" not in st.session_state:
+                st.session_state["image_history"] = []
             image_file = st.file_uploader("Upload an image of ingredients", type=["jpg", "png", "jpeg"])
-
+            for i in range(len(st.session_state["image_history"])):
+                current_message_1 = st.session_state["cam_history"][i]
+                current_message_2 = st.session_state["cam_history"][i + 1]
+                current_image = st.session_state["image_history"][i]
+                with st.chat_message(name=current_message_1["role"]):
+                    st.image(current_image)
+                    st.write(current_message_1["content"])
+                    st.write(current_message_2["content"])
             if image_file is not None:
                 temp_dir = 'temp'
                 os.makedirs(temp_dir, exist_ok=True)
 
                 image_path = os.path.join(temp_dir, image_file.name)
+                st.session_state["image_history"].append(image_path)
                 with open(image_path, 'wb') as f:
                     f.write(image_file.read())
 
@@ -537,9 +547,15 @@ match st.session_state.page:
                     )
                     st.session_state["system_cam_prompt"] = {"role": "system", "content": f"{task_definition}"}
 
+
+
                 camera_request_actions(ingredients)
+                st.image(st.session_state["image_history"][len(st.session_state["image_history"])-1])
+                st.write(st.session_state["cam_history"][len(st.session_state["cam_history"])-2]["content"])
+                st.write(st.session_state["cam_history"][len(st.session_state["cam_history"])-1]["content"])
+
                 #recipe = get_recipe_from_image(ingredients)
-                st.image(image_path)
+                #st.image(image_path)
 
                 st.markdown("""
                                 <style>
@@ -550,10 +566,7 @@ match st.session_state.page:
                                 """, unsafe_allow_html=True
                             )
 
-                st.write("Recipe:")
-                for i in st.session_state["cam_history"]:
-                    with st.chat_message(name=i["role"]):
-                        st.write(i["content"])
+
                 #st.write(recipe)
 
 
