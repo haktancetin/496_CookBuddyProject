@@ -7,5 +7,5 @@ external_urls:
   local_recipe: URL
   ngrok_url: URL
 
-get_nutrition_from_generated_recipe_title: bool
-is_production: bool
+get_nutrition_from_generated_recipe_title: True
+is_production: False
