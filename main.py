@@ -4,9 +4,14 @@ import streamlit as st
 import requests
 import os
 import toml
+import json
+
 from dbcontrol import password_validation, password_hash
 from streamlit_javascript import st_javascript
 from user_agents import parse
+
+# Only object formats are used from this import!
+from openai import OpenAI
 
 ua_string = st_javascript("""window.navigator.userAgent;""")
 while ua_string == 0:
@@ -54,6 +59,8 @@ if 'page' not in st.session_state:
 
 if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
+
+client = OpenAI(base_url=f"{inference_server_url}/v1", api_key="not-needed")
 
 if is_production:
     st.markdown("""
@@ -190,6 +197,7 @@ def get_nutrition_by_title(recipe_title: str):
 # Chatbot-specific Methods
 def chat_actions():
     query = st.session_state["chat_input"]
+
     response = get_query_response(prompt=query)
 
     response_text = response["content"]
@@ -291,16 +299,16 @@ def get_query_response(prompt: str):
         current_user_message,
     )
 
-    params_dic = {
-        "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": -1,
-        "stream": False
-    }
+    response = client.chat.completions.create(
+        model='local-model',
+        messages=messages,
+        temperature=0.7,
+        max_tokens=-1,
+        stream=True
+    )
 
-    response = requests.post(url=inference_server_url, json=params_dic)
-    response_json = response.json()
-    return response_json["choices"][0]["message"]
+    for chunk in response:
+        yield chunk.choices[0].delta.content
 
 
 if st.session_state.page == 'Home':
@@ -430,11 +438,52 @@ match st.session_state.page:
 
                 st.session_state["system_prompt"] = {"role": "system", "content": f"{task_definition}"}
 
-            st.chat_input("Enter your message", on_submit=chat_actions, key="chat_input")
+            for message in st.session_state["chat_history"]:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
 
-            for i in st.session_state["chat_history"]:
-                with st.chat_message(name=i["role"]):
-                    st.write(i["content"])
+            if prompt := st.chat_input("Enter your message"):
+                st.session_state["chat_history"].append({"role": "user", "content": prompt})
+
+                messages_to_send = [st.session_state["system_prompt"]]
+                for past_message in st.session_state["chat_history"]:
+                    messages_to_send.append(past_message)
+
+                with st.chat_message(name="user"):
+                    st.markdown(prompt)
+                with st.chat_message(name="assistant"):
+                    stream = client.chat.completions.create(
+                        model='local-model',
+                        messages=messages_to_send,
+                        temperature=0.7,
+                        max_tokens=-1,
+                        stream=True
+                    )
+                    response = st.write_stream(stream)
+
+                    recipe_fields = recipe_parser(response)
+
+                    if recipe_fields is not None and get_nutrition_from_generated_recipe_title is True:
+                        recipe_information = get_nutrition_by_title(recipe_title=recipe_fields["title"])
+                        if "status" not in recipe_information.keys():
+                            response["content"].append(f"\nCalories: "
+                                                       f"{recipe_information['calories']['value']} "
+                                                       f"{recipe_information['calories']['unit']}\n")
+
+                            response["content"].append(f"Carbs: "
+                                                       f"{recipe_information['carbs']['value']} "
+                                                       f"{recipe_information['carbs']['unit']}\n")
+
+                            response["content"].append(f"Fat: "
+                                                       f"{recipe_information['fat']['value']} "
+                                                       f"{recipe_information['fat']['unit']}\n")
+
+                            response["content"].append(f"Protein: "
+                                                       f"{recipe_information['protein']['value']} "
+                                                       f"{recipe_information['protein']['unit']}\n")
+
+                st.session_state["chat_history"].append({"role": "assistant", "content": response})
+
         else:
             st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
 
