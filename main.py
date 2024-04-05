@@ -6,6 +6,8 @@ import os
 import toml
 import json
 
+from streamlit_option_menu import option_menu
+
 from dbcontrol import password_validation, password_hash
 from streamlit_javascript import st_javascript
 from user_agents import parse
@@ -197,69 +199,6 @@ def get_nutrition_by_title(recipe_title: str):
     else:
         return []
 
-
-# Chatbot-specific Methods
-def chat_actions():
-    query = st.session_state["chat_input"]
-
-    response = get_query_response(prompt=query)
-
-    response_text = response["content"]
-    recipe_fields = recipe_parser(response_text)
-
-    if recipe_fields is not None and get_nutrition_from_generated_recipe_title is True:
-        recipe_information = get_nutrition_by_title(recipe_title=recipe_fields["title"])
-        if "status" not in recipe_information.keys():
-            response["content"].append(f"\nCalories: "
-                                       f"{recipe_information['calories']['value']} "
-                                       f"{recipe_information['calories']['unit']}\n")
-
-            response["content"].append(f"Carbs: "
-                                       f"{recipe_information['carbs']['value']} "
-                                       f"{recipe_information['carbs']['unit']}\n")
-
-            response["content"].append(f"Fat: "
-                                       f"{recipe_information['fat']['value']} "
-                                       f"{recipe_information['fat']['unit']}\n")
-
-            response["content"].append(f"Protein: "
-                                       f"{recipe_information['protein']['value']} "
-                                       f"{recipe_information['protein']['unit']}\n")
-
-    st.session_state["chat_history"].append(response)
-
-
-def camera_request_actions(ingredients_from_image: list):
-    ingredients_string = [str(element) for element in ingredients_from_image]
-    delimiter = ", "
-    ingredients_string = delimiter.join(ingredients_string)
-    response = get_recipe_from_image(ingredients_string)
-
-    response_text = response["content"]
-    recipe_fields = recipe_parser(response_text)
-
-    if recipe_fields is not None and get_nutrition_from_generated_recipe_title is True:
-        recipe_information = get_nutrition_by_title(recipe_title=recipe_fields["title"])
-        if "status" not in recipe_information.keys():
-            response["content"].append(f"\nCalories: "
-                                       f"{recipe_information['calories']['value']} "
-                                       f"{recipe_information['calories']['unit']}\n")
-
-            response["content"].append(f"Carbs: "
-                                       f"{recipe_information['carbs']['value']} "
-                                       f"{recipe_information['carbs']['unit']}\n")
-
-            response["content"].append(f"Fat: "
-                                       f"{recipe_information['fat']['value']} "
-                                       f"{recipe_information['fat']['unit']}\n")
-
-            response["content"].append(f"Protein: "
-                                       f"{recipe_information['protein']['value']} "
-                                       f"{recipe_information['protein']['unit']}\n")
-
-    st.session_state["cam_history"].append(response)
-
-
 def recipe_parser(chat_conversation):
     title = ""
     ingredients = []
@@ -314,66 +253,37 @@ def recipe_dp(title, ingredients, directions):
                  (title, ingredients, directions))
     conn.commit()
 
-
-def get_recipe_from_image(ingredients_from_image: str):
-    # response = requests.get(url=recipe_server_url + "/generate_recipe", params={"ingredients": ingredients})
-    messages = [st.session_state["system_cam_prompt"]]
-    for past_message in st.session_state["cam_history"]:
-        messages.append(past_message)
-
-    current_user_message = {"role": "user", "content": ingredients_from_image}
-    messages.append(current_user_message)
-    st.session_state["cam_history"].append(
-        current_user_message,
-    )
-
-    params_dic = {
-        "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": -1,
-        "stream": False
-    }
-
-    response = requests.post(url=inference_server_url, json=params_dic)
-    response_json = response.json()
-    # recipe_parser(response_json["choices"][0]["message"]["content"])
-    return response_json["choices"][0]["message"]
+def on_change(key):
+    st.session_state.page = st.session_state[key]
 
 
-def get_query_response(prompt: str):
-    messages = [st.session_state["system_prompt"]]
-
-    for past_message in st.session_state["chat_history"]:
-        messages.append(past_message)
-
-    current_user_message = {"role": "user", "content": prompt}
-    messages.append(current_user_message)
-    st.session_state["chat_history"].append(
-        current_user_message,
-    )
-
-    response = client.chat.completions.create(
-        model='local-model',
-        messages=messages,
-        temperature=0.7,
-        max_tokens=-1,
-        stream=True
-    )
-
-    for chunk in response:
-        yield chunk.choices[0].delta.content
-
-
-if st.session_state.page == 'Home':
-    st.sidebar.radio(
-        "Navigation",
-        ['Home', 'Profile', 'Chatbot', 'Camera', 'Get Random Recipe', 'Search Random Recipes by Nutrients',
-         'Convert Amounts', 'Logout'],
-        key='nav',
-        on_change=set_page
-    )
-else:
-    st.sidebar.button('Back to Home', on_click=home)
+with st.sidebar:
+    selected = option_menu(menu_title=None,
+                           options=['Home',
+                                    'Profile',
+                                    'Chatbot',
+                                    'Camera',
+                                    'Get Random Recipe',
+                                    'Search Random Recipes by Nutrients',
+                                    'Convert Amounts',
+                                    'Logout'],
+                           icons=['house',
+                                  'clipboard-check',
+                                  'chat-dots',
+                                  'camera',
+                                  'dice-6',
+                                  'search',
+                                  'calculator',
+                                  'box-arrow-left'],
+                           on_change=on_change, key='nav', orientation="vertical",
+                           styles={
+                               "container": {"display": "inline-block"},
+                               "icon": {"color": "orange"},
+                               "nav-link": {"text-align": "left", "margin": "0px",
+                                            "--hover-color": "#eee"},
+                               "nav-link-selected": {"background-color": "red"},
+                           }
+                           )
 
 match st.session_state.page:
     case 'Home':
@@ -575,7 +485,7 @@ match st.session_state.page:
             for i in range(len(st.session_state["image_history"])):
                 current_image = st.session_state["image_history"][i]
                 user_message = st.session_state["cam_history"][i]
-                assistant_message = st.session_state["cam_history"][i+1]
+                assistant_message = st.session_state["cam_history"][i + 1]
 
                 st.image(current_image)
                 with st.chat_message(name="user"):
