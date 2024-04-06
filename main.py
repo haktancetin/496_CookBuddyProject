@@ -140,14 +140,21 @@ def change_password(password):
 
 # Spoonacular API Endpoints
 
-def get_random_recipe(number=10):
-    response = requests.get(f"https://api.spoonacular.com/recipes/random?apiKey={spoonacular_api_key}&number=10")
+def get_random_recipe_options(options):
+    response = requests.get(f"https://api.spoonacular.com/recipes/random?include-tags={options}&apiKey={spoonacular_api_key}&number=10")
     if response.status_code == 200:
         recipe_data = response.json()
         return recipe_data['recipes']
     else:
         return []
 
+def get_random_recipe():
+    response = requests.get(f"https://api.spoonacular.com/recipes/random?apiKey={spoonacular_api_key}&number=10")
+    if response.status_code == 200:
+        recipe_data = response.json()
+        return recipe_data['recipes']
+    else:
+        return []
 
 def get_recipe_analyze(recipe_id):
     url = f"https://api.spoonacular.com/recipes/{recipe_id}/analyzedInstructions?apiKey={spoonacular_api_key}"
@@ -159,6 +166,13 @@ def get_recipe_analyze(recipe_id):
                 return data[0]['steps']
     return []
 
+def complexSearch(minCal, maxCal, minCarbs, maxCarbs, minProtein, maxProtein):
+    url = f"https://api.spoonacular.com/recipes/complexSearch?minCalories={minCal}&maxCalories={maxCal}&minCarbs={minCarbs}&maxCarbs={maxCarbs}&minProtein={minProtein}&maxProtein={maxProtein}&apiKey={spoonacular_api_key}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return data['results']
+    return []
 
 def get_recipe_nutrition(recipe_id):
     url = f"https://api.spoonacular.com/recipes/{recipe_id}/nutritionWidget.json"
@@ -170,15 +184,15 @@ def get_recipe_nutrition(recipe_id):
     else:
         return []
 
-
-def get_recipe_by_nutrients(minCal, maxCal, minCarbs, maxCarbs, minProtein, maxProtein):
-    url = f"https://api.spoonacular.com/recipes/findByNutrients?minCalories={minCal}&maxCalories={maxCal}&minCarbs={minCarbs}&maxCarbs={maxCarbs}&minProtein={minProtein}&maxProtein={maxProtein}&apiKey={spoonacular_api_key}"
-    response = requests.get(url)
+def get_recipe_ingredient(recipe_id):
+    url = f"https://api.spoonacular.com/recipes/{recipe_id}/ingredientWidget.json"
+    params = {"apiKey": spoonacular_api_key}
+    response = requests.get(url, params=params)
     if response.status_code == 200:
         data = response.json()
         return data
-    return []
-
+    else:
+        return []
 
 def convertAmounts(ingredientName, sourceAmount, sourceUnit, targetUnit):
     response = requests.get(
@@ -612,35 +626,47 @@ match st.session_state.page:
     case 'Get Random Recipe':
         st.title('Get Random Recipe')
         if st.session_state["authentication"] is True:
-            recipes = get_random_recipe(10)
-            for recipe in recipes:
-                st.subheader(recipe["title"])
-                if recipe["image"]:
-                    st.image(recipe["image"])
-                st.subheader("Ingredients")
-                for i in recipe["extendedIngredients"]:
-                    st.write(f" * {i['original']}")
-                if recipe["readyInMinutes"]:
-                    st.subheader("Ready In Minutes")
-                    st.write(recipe["readyInMinutes"])
-                if recipe["servings"]:
-                    st.subheader("Servings")
-                    st.write(recipe["servings"])
-                recipe_id = recipe["id"]
-                instructions = get_recipe_analyze(recipe_id)
-                if instructions:
-                    st.subheader("Instructions")
-                    for step in instructions:
-                        st.write(f"{step['number']}- {step['step']}")
-                else:
-                    st.write("Instructions are not found")
-                nutrition = get_recipe_nutrition(recipe_id)
-                if nutrition:
-                    st.subheader("Nutrition")
-                    st.write(f"Calories: {nutrition['calories']}")
-                    st.write(f"Carbs: {nutrition['carbs']}")
-                    st.write(f"Fat: {nutrition['fat']}")
-                    st.write(f"Protein: {nutrition['protein']}")
+            with st.form("Search"):
+                options = st.multiselect(
+                    'enter your meal selection',
+                    ['vegetarian', 'vegan', 'glutenFree', 'dairyFree'])
+
+                submitted = st.form_submit_button("Search")
+                if submitted:
+                    if options == []:
+                        recipes = get_random_recipe()
+                    else:
+                        recipes = get_random_recipe_options(options)
+                    for recipe in recipes:
+                        st.subheader(recipe["title"])
+                        if "image" in recipe:
+                            st.image(recipe["image"])
+                        else:
+                            st.write("Image not found.")
+                        st.subheader("Ingredients")
+                        for i in recipe["extendedIngredients"]:
+                            st.write(f" * {i['original']}")
+                        if recipe["readyInMinutes"]:
+                            st.subheader("Ready In Minutes")
+                            st.write(recipe["readyInMinutes"])
+                        if recipe["servings"]:
+                            st.subheader("Servings")
+                            st.write(recipe["servings"])
+                        recipe_id = recipe["id"]
+                        instructions = get_recipe_analyze(recipe_id)
+                        if instructions:
+                            st.subheader("Instructions")
+                            for step in instructions:
+                                st.write(f"{step['number']}- {step['step']}")
+                        else:
+                            st.write("Instructions are not found")
+                        nutrition = get_recipe_nutrition(recipe_id)
+                        if nutrition:
+                            st.subheader("Nutrition")
+                            st.write(f"Calories: {nutrition['calories']}")
+                            st.write(f"Carbs: {nutrition['carbs']}")
+                            st.write(f"Fat: {nutrition['fat']}")
+                            st.write(f"Protein: {nutrition['protein']}")
         else:
             st.write(":red[**Hey, it looks like you're not logged in yet. Please login first!**]")
     case 'Search Random Recipes by Nutrients':
@@ -661,15 +687,20 @@ match st.session_state.page:
                 minPro, maxPro = valuesPro
                 submitted = st.form_submit_button("Search")
                 if submitted:
-                    recipe = get_recipe_by_nutrients(minCal, maxCal, minCarb, maxCarb, minPro, maxPro)
-                    if recipe:
-                        for r in recipe:
-                            st.subheader(r["title"])
-                            st.write(f"Calories: {r['calories']}")
-                            st.write(f"Carbs: {r['carbs']}")
-                            st.write(f"Fat: {r['fat']}")
-                            st.write(f"Protein: {r['protein']}")
+                    complexSearch = complexSearch(minCal, maxCal, minCarb, maxCarb, minPro, maxPro)
+                    if complexSearch:
+                        for r in complexSearch:
                             recipe_id = r["id"]
+                            st.subheader(r["title"])
+                            if "image" in r:
+                                st.image(r["image"])
+                            ingredient = get_recipe_ingredient(recipe_id)
+                            ingredient_info = ingredient["ingredients"]
+                            for ing in ingredient_info:
+                                st.write(f"* {ing['name']} {ing['amount']['metric']['value']} {ing['amount']['metric']['unit']}")
+                            info = r["nutrition"]["nutrients"]
+                            for nutrient in info:
+                                st.write(f"{nutrient['name']}:{nutrient['amount']} {nutrient['unit']}")
                             instructions = get_recipe_analyze(recipe_id)
                             if instructions:
                                 st.subheader("Instructions")
