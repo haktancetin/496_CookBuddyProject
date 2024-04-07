@@ -9,6 +9,8 @@ import json
 from streamlit_option_menu import option_menu
 
 from dbcontrol import password_validation, password_hash
+from object_detection.image_functions import detect
+
 from streamlit_javascript import st_javascript
 from user_agents import parse
 
@@ -199,6 +201,7 @@ def get_nutrition_by_title(recipe_title: str):
     else:
         return []
 
+
 def recipe_parser(chat_conversation):
     title = ""
     ingredients = []
@@ -252,6 +255,7 @@ def recipe_dp(title, ingredients, directions):
     curr.execute(query,
                  (title, ingredients, directions))
     conn.commit()
+
 
 def on_change(key):
     st.session_state.page = st.session_state[key]
@@ -452,6 +456,10 @@ match st.session_state.page:
 
     case 'Camera':
         st.title('Camera')
+
+        temp_dir = 'temp'
+        os.makedirs(temp_dir, exist_ok=True)
+
         if st.session_state["authentication"] is True:
 
             if "image_history" not in st.session_state:
@@ -496,16 +504,13 @@ match st.session_state.page:
             if st.session_state["is_session_pc"] is False:
                 if picture := st.camera_input("**Take a picture!**"):
 
-                    temp_dir = 'temp'
-                    os.makedirs(temp_dir, exist_ok=True)
-
                     image_path = os.path.join(temp_dir, picture.name)
                     with open(image_path, 'wb') as f:
                         f.write(picture.read())
                         st.session_state["image_history"].append(image_path)
                         st.image(image_path)
+                        ingredients = detect(image_path=image_path, model_path="best.pt", cnf=0.3, mode=1)
 
-                    ingredients = ["garlic", "onion", "potatoes", "tomatoes"]  # Placeholder!
                     ingredients_str = ", ".join(ingredients)
                     current_user_message = {"role": "user", "content": ingredients_str}
 
@@ -551,18 +556,26 @@ match st.session_state.page:
 
                     st.session_state["cam_history"].append({"role": "assistant", "content": response})
 
-            if uploaded_picture := st.file_uploader("Upload an image of ingredients", type=["jpg", "png", "jpeg"]):
-                temp_dir = 'temp'
-                os.makedirs(temp_dir, exist_ok=True)
+            if uploaded_pictures := st.file_uploader("Upload an image of ingredients",
+                                                    type=["jpg", "png", "jpeg"],
+                                                    accept_multiple_files=True):
 
-                image_path = os.path.join(temp_dir, uploaded_picture.name)
-                with open(image_path, 'wb') as f:
-                    f.write(uploaded_picture.read())
-                    st.session_state["image_history"].append(image_path)
-                    st.image(image_path)
+                current_uploaded_image_paths = []
+                ingredient_detection_results = set()
 
-                ingredients = ["garlic", "onion", "potatoes", "tomatoes"]  # Placeholder!
-                ingredients_str = ", ".join(ingredients)
+                for picture in uploaded_pictures:
+                    picture_path = os.path.join(temp_dir, picture.name)
+                    current_uploaded_image_paths.append(picture_path)
+                    with open(picture_path, 'wb') as f:
+                        f.write(picture.read())
+
+                st.session_state["image_history"].append(current_uploaded_image_paths)
+
+                for path in current_uploaded_image_paths:
+                    image_detection_results = detect(image_path=path, model_path="best.pt", cnf=0.3, mode=1)
+                    ingredient_detection_results.update(image_detection_results)
+
+                ingredients_str = ", ".join(ingredient_detection_results)
                 current_user_message = {"role": "user", "content": ingredients_str}
 
                 st.session_state["cam_history"].append(current_user_message)
