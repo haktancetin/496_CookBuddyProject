@@ -509,7 +509,7 @@ match st.session_state.page:
                         f.write(picture.read())
                         st.session_state["image_history"].append(image_path)
                         st.image(image_path)
-                        ingredients = detect(image_path=image_path, model_path="best.pt", cnf=0.3, mode=1)
+                        ingredients = detect(image_path=image_path, model_path="trained_yolov8_model.pt", cnf=0.3, mode=1)
 
                     ingredients_str = ", ".join(ingredients)
                     current_user_message = {"role": "user", "content": ingredients_str}
@@ -572,7 +572,7 @@ match st.session_state.page:
                 st.session_state["image_history"].append(current_uploaded_image_paths)
 
                 for path in current_uploaded_image_paths:
-                    image_detection_results = detect(image_path=path, model_path="best.pt", cnf=0.3, mode=1)
+                    image_detection_results = detect(image_path=path, model_path="trained_yolov8_model.pt", cnf=0.3, mode=1)
                     ingredient_detection_results.update(image_detection_results)
 
                 ingredients_str = ", ".join(ingredient_detection_results)
